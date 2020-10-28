@@ -1,0 +1,105 @@
+---
+title: "Zachary_Levine_Math747_A1.R"
+author: "Zachary Levine"
+date: '2020-10-27'
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Importing libraries and loading data
+
+```{r, dev="tikz", results = "hide", warning = FALSE, message = FALSE}
+library(epigrowthfit)
+library(tikzDevice)
+library(Hmisc)
+library(dplyr)
+library(anytime)
+##Start with a data.frame of prevalence for all proviences and all dates.
+##Exclude Nunavut, since no reported cases.
+allcases <- read.csv("COVID19_Canada.csv")[,c("Province", "Date", "confirmed_positive")]
+##Turn that into a list of each provience's interval reported cases time series.
+##Get rid of rows with duplicate dates, such as (NL-2020-03-25).
+allcases <- allcases[-c(1423, 1424, 1660, 1661, 2561, 2562),]
+splitintervalCases <- lapply(as.vector(unique(allcases$Province)), function(provinceName){
+  ##For each province, select all the data corresponding to that province.
+  casesdf <- allcases[as.vector(allcases$Province) == provinceName,]
+  ##Get rid of missing values.
+  casesdf <- casesdf[!is.na(casesdf$"confirmed_positive"),]
+  ##Derive interval incidence by differencing (discarding the first reported entry to align all the columns and keep them the same length), keeping the column for each provience as a check to make sure we're doing everthing properly.
+  intervalcasesdf <- bind_cols("Date" = casesdf$"Date",
+                           "Province" =  casesdf$"Province",
+                           "intervalCases" = c(0, diff(casesdf$"confirmed_positive", lag = 1)))
+  ##Some row of contain a negative value, so let's get rid of them
+  intervalcasesdf <- intervalcasesdf[intervalcasesdf$intervalCases >= 0,]
+  return(intervalcasesdf)
+})
+names(splitintervalCases) <- as.vector(unique(allcases$Province))
+##List of peaks  of interval cases time series, for each province. Each province corresponds to a list with the first element as index of the peak of the first wave for that province, and the second as the index of the peak of the second wave for that province.
+##This function takes in a time series of interval incidence, and whether or not we want to select the first peak, or the second. It then cuts the data frame in half and either grabs index of the maximum in first peak for the first wave, or in the second for the second wave.
+findpeakIndex <- function(intervaltimeSeries, which){
+  if (which == 1){
+    half <- intervaltimeSeries[1:as.integer(length(intervaltimeSeries)/2)]
+  }
+  else if (which == "bottom"){
+    return(which.min(intervaltimeSeries[findpeakIndex(intervaltimeSeries, which = 1):length(intervaltimeSeries)]))
+  }
+  else{
+    half <- intervaltimeSeries[as.integer(findpeakIndex(intervaltimeSeries, which = 1)):
+                                 length(intervaltimeSeries)]
+  }
+  return(which.max(half))
+}
+##Find the index of the peak of the first and second wave for each province.
+##Select by peaks["ON"]$ON$first
+firstpeaks <- sapply(names(splitintervalCases), function(provinceName){
+  return(findpeakIndex(data.frame(splitintervalCases[names(splitintervalCases) ==
+                                                         provinceName])[,paste0(provinceName,".intervalCases")],
+                         1))})
+secondpeaks <- sapply(names(splitintervalCases), function(provinceName){
+           return(findpeakIndex(data.frame(splitintervalCases[names(splitintervalCases) ==
+                                                         provinceName])[,paste0(provinceName,".intervalCases")],
+                         2))})
+bottomindexes <- sapply(names(splitintervalCases), function(provinceName){
+           return(findpeakIndex(data.frame(splitintervalCases[names(splitintervalCases) ==
+                                                         provinceName])[,paste0(provinceName,".intervalCases")],
+                         "bottom"))})
+names(firstpeaks) <- names(firstpeaks)
+names(secondpeaks) <- names(splitintervalCases)
+names(bottomindexes) <- names(firstpeaks)
+##Make a list of instantiated egf objects for each wave and each province.
+##We have to difference the cumulative cases to get interval cases, but in doing so we get rid of the first case report. Set it to zero to make the data frame with all columns of the same length, but get rid of it before initializing egf objects.
+wave1egfs <- sapply(names(splitintervalCases)[names(splitintervalCases) != "NU"], function(provinceName){
+  provincefirstPeak <- firstpeaks[provinceName]
+  provincetimeseries <- data.frame(splitintervalCases[names(splitintervalCases) == provinceName])[3][,1][2:length(data.frame(splitintervalCases[names(splitintervalCases) == provinceName])[3][,1])]
+  dates <- anytime::anydate(data.frame(splitintervalCases[names(splitintervalCases) == provinceName])[1][,1])
+  return(list(egf_init(date = dates, cases = provincetimeseries, peak = provincefirstPeak)))
+  })
+wave2egfs <- sapply(names(splitintervalCases)[names(splitintervalCases) != "NU"], function(provinceName){
+  provincefirstPeak <- firstpeaks[provinceName]
+  provincesecondPeak <- secondpeaks[provinceName]
+  bottomindex <- bottomindexes[provinceName]
+  provincetimeseries <- data.frame(splitintervalCases[names(splitintervalCases) == provinceName])[3][,1][2:length(data.frame(splitintervalCases[names(splitintervalCases) == provinceName])[3][,1])]
+  dates <- anytime::anydate(data.frame(splitintervalCases[names(splitintervalCases) == provinceName])[1][,1])
+  return(list(egf_init(date = dates, cases = provincetimeseries, first = bottomindex, last = length(provincetimeseries), peak = provincesecondPeak)))
+  })
+names(wave1egfs) <- names(splitintervalCases)[names(splitintervalCases) != "NU"]
+names(wave2egfs) <- names(wave1egfs)
+```
+
+Instantiate tables for each wave.
+```{r, echo = FALSE}
+wave1table <- data.frame("Province" = as.vector(unique(fulldata$Province)),
+                         "Exponential Growth Rate" = rep(NA, length(as.vector(unique(fulldata$Province)))),
+                         "Doubling Time" = rep(NA, length(as.vector(unique(fulldata$Province)))),
+                         "Reproduction Number" = rep(NA, length(as.vector(unique(fulldata$Province)))))
+wave2table <- wave1table
+```
+
+Table for the second wave.
+```{r, results = "asis"}
+options(omitlatexcom=TRUE)
+Hmisc::latex(wave1table, title = "", rowname = "", file = "")
+```
