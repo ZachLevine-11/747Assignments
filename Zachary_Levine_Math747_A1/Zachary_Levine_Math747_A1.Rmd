@@ -11,7 +11,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ## Importing libraries and loading data
 
-```{r, dev="tikz", results = "hide", warning = FALSE, message = FALSE}
+```{r, dev="tikz", echo = FALSE, results = "hide", warning = FALSE, message = FALSE}
 library(epigrowthfit)
 library(tikzDevice)
 library(Hmisc)
@@ -91,15 +91,19 @@ names(wave2egfs) <- names(wave1egfs)
 
 Instantiate tables for each wave.
 ```{r, echo = FALSE}
-wave1table <- data.frame("Province" = as.vector(unique(fulldata$Province)),
-                         "Exponential Growth Rate" = rep(NA, length(as.vector(unique(fulldata$Province)))),
-                         "Doubling Time" = rep(NA, length(as.vector(unique(fulldata$Province)))),
-                         "Reproduction Number" = rep(NA, length(as.vector(unique(fulldata$Province)))))
-wave2table <- wave1table
+##Make a table of results for the egf objects in a list.
+make_table <- function(egflist){
+  return(data.frame("Province" = as.vector(names(egflist)),
+                         "Exponential Growth Rate" = sapply(egflist, function(x){
+                           return(x$theta0[1])}),
+                         "Doubling Time"= sapply(egflist, epigrowthfit::compute_doubling_time),
+                         "Reproduction Number" = sapply(1:length(egflist), function(x){return(1)})))
+  }
+table1 <- make_table(wave1egfs)
 ```
 
 Table for the second wave.
 ```{r, results = "asis"}
 options(omitlatexcom=TRUE)
-Hmisc::latex(wave1table, title = "", rowname = "", file = "")
+Hmisc::latex(table1, title = "", rowname = "", file = "")
 ```
