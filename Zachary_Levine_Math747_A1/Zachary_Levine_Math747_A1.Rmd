@@ -50,12 +50,34 @@ splitintervalCases <- lapply(as.vector(unique(allcases$Province)), function(prov
     }
     i <- i + 1
   }
+  leenumbers <- c()
+  leefunction <- function(provinceName){
+    i <- 1
+    ournumber <- 0 
+    while (i <= nrow(intervalcasesdf)){
+      if (is.weekend(anytime::anydate(intervalcasesdf[[i, "Date"]]))){
+       ##Is a Saturday.
+        if (i + 2 <= nrow(intervalcasesdf)){
+                if (intervalcasesdf[[i, "intervalCases"]] == 0 & intervalcasesdf[[i + 1, "intervalCases"]] && intervalcasesdf[[i+2, "intervalCases"]]){
+          ournumber <- ournumber + 1
+        }
+      }
+    }
+    else{
+    }
+    i <- i + 1
+  }
+  return(ournumber)
+  }
+  leenumbers <- c(leenumbers, leefunction(provinceName))
   mondayIndices <- format(as.Date(anytime::anydate(intervalcasesdf$Date)), '%A') == "Monday"
   ##Make the Monday cases the sum of the Monday cases the case reports on the weekends
   intervalcasesdf[mondayIndices,"intervalCases"] <- intervalcasesdf[mondayIndices,"intervalCases"] + weekendSums
   ##Remove the weekends.
   intervalcasesdf <- intervalcasesdf[!is.weekend(anytime::anydate(intervalcasesdf$Date)),]
   return(intervalcasesdf)
+  ##uncomment to return leenumbers.
+  ##return(leenumbers)
 })
 names(splitintervalCases) <- as.vector(unique(allcases$Province))
 ##List of peaks  of interval cases time series, for each province. Each province corresponds to a list with the first element as index of the peak of the first wave for that province, and the second as the index of the peak of the second wave for that province.
@@ -92,7 +114,6 @@ names(secondpeaks) <- names(splitintervalCases)
 names(bottomindexes) <- names(firstpeaks)
 ##Make a list of instantiated egf objects for each wave and each province.
 ##We have to difference the cumulative cases to get interval cases, but in doing so we get rid of the first case report. Set it to zero to make the data frame with all columns of the same length, but get rid of it before initializing egf objects.
-
 wave1egfs <- sapply(names(splitintervalCases)[names(splitintervalCases) != "NU"], function(provinceName){
   provincefirstPeak <- firstpeaks[provinceName]
   provincetimeseries <- data.frame(splitintervalCases[names(splitintervalCases) == provinceName])[3][,1][2:length(data.frame(splitintervalCases[names(splitintervalCases) == provinceName])[3][,1])]
