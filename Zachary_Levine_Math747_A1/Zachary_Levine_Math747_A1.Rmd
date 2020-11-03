@@ -2,11 +2,14 @@
 title: "Zachary_Levine_Math747_A1.R"
 author: "Zachary Levine"
 date: '2020-10-27'
-output: pdf_document
+output: 
+  pdf_document:
+    extra_dependencies: ["flafter"]
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(fig.pos = "!H", out.extra = "")
 ```
 
 ## Importing libraries and loading data
@@ -135,6 +138,6 @@ table1 <- make_table(wave1egfs)
 
 Table for the second wave.
 ```{r, results = "asis"}
-options(omitlatexcom=TRUE)
+options(omitlatexcom = TRUE)
 Hmisc::latex(table1, title = "", rowname = "", file = "")
 ```
