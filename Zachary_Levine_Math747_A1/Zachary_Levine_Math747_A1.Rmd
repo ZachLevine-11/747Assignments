@@ -17,6 +17,7 @@ library(tikzDevice)
 library(Hmisc)
 library(dplyr)
 library(anytime)
+library(chron)
 ##Start with a data.frame of prevalence for all proviences and all dates.
 ##Exclude Nunavut, since no reported cases.
 allcases <- read.csv("COVID19_Canada.csv")[,c("Province", "Date", "confirmed_positive")]
@@ -34,6 +35,23 @@ splitintervalCases <- lapply(as.vector(unique(allcases$Province)), function(prov
                            "intervalCases" = c(0, diff(casesdf$"confirmed_positive", lag = 1)))
   ##Some row of contain a negative value, so let's get rid of them
   intervalcasesdf <- intervalcasesdf[intervalcasesdf$intervalCases >= 0,]
+  ##Make a list of sums of weekend case reports such that the ith element is the sum of the reported cases on Saturday and Sunday for the ith weekend.
+  weekendSums <- c()
+  weekendeports <- as.list(intervalcasesdf[is.weekend(anytime::anydate(intervalcasesdf$Date)),"intervalCases"])$intervalCases
+  i <- 1
+  while (i <= length(weekendeports)){
+    if (i %% 2 == 0){
+      weekendSums <- c(weekendSums, weekendeports[i] +  weekendeports[i - 1])
+    }
+    else{
+    }
+    i <- i + 1
+  }
+  mondayIndices <- format(as.Date(anytime::anydate(intervalcasesdf$Date)), '%A') == "Monday"
+  ##Make the Monday cases the sum of the Monday cases the case reports on the weekends
+  intervalcasesdf[mondayIndices,"intervalCases"] <- intervalcasesdf[mondayIndices,"intervalCases"] + weekendSums
+  ##Remove the weekends.
+  intervalcasesdf <- intervalcasesdf[!is.weekend(anytime::anydate(intervalcasesdf$Date)),]
   return(intervalcasesdf)
 })
 names(splitintervalCases) <- as.vector(unique(allcases$Province))
@@ -71,6 +89,7 @@ names(secondpeaks) <- names(splitintervalCases)
 names(bottomindexes) <- names(firstpeaks)
 ##Make a list of instantiated egf objects for each wave and each province.
 ##We have to difference the cumulative cases to get interval cases, but in doing so we get rid of the first case report. Set it to zero to make the data frame with all columns of the same length, but get rid of it before initializing egf objects.
+
 wave1egfs <- sapply(names(splitintervalCases)[names(splitintervalCases) != "NU"], function(provinceName){
   provincefirstPeak <- firstpeaks[provinceName]
   provincetimeseries <- data.frame(splitintervalCases[names(splitintervalCases) == provinceName])[3][,1][2:length(data.frame(splitintervalCases[names(splitintervalCases) == provinceName])[3][,1])]
@@ -80,7 +99,19 @@ wave1egfs <- sapply(names(splitintervalCases)[names(splitintervalCases) != "NU"]
 wave2egfs <- sapply(names(splitintervalCases)[names(splitintervalCases) != "NU"], function(provinceName){
   provincefirstPeak <- firstpeaks[provinceName]
   provincesecondPeak <- secondpeaks[provinceName]
-  bottomindex <- bottomindexes[provinceName]
+  ##Adjust for better fitting for some provinces
+  if (provinceName == "MB"){
+    bottomindex <- bottomindexes["MB"] + 10
+  }
+  else if (provinceName == "AB"){
+  bottomindex <- bottomindexes["AB"] - 20
+  }
+    else if (provinceName == "YT"){
+  bottomindex <- bottomindexes["YT"] +50
+  }
+  else{
+    bottomindex <- bottomindexes[provinceName]
+  }
   provincetimeseries <- data.frame(splitintervalCases[names(splitintervalCases) == provinceName])[3][,1][2:length(data.frame(splitintervalCases[names(splitintervalCases) == provinceName])[3][,1])]
   dates <- anytime::anydate(data.frame(splitintervalCases[names(splitintervalCases) == provinceName])[1][,1])
   return(list(egf_init(date = dates, cases = provincetimeseries, first = bottomindex, last = length(provincetimeseries), peak = provincesecondPeak)))
