@@ -106,21 +106,32 @@ names(splitintervalCases) <- as.vector(unique(allcases$Province))
 ##We have to difference the cumulative cases to get interval cases, but in doing so we get rid of the first case report. Set it to zero to make the data frame with all columns of the same length, but get rid of it before initializing egf objects.
 ##Each element of egfs is a list for the corresponding province containing the egf_init object for the first wave and the second wave separately.
 ##For each province, holds the index for the start of the waves
-wave1beginings <- c("ON" = 10, "AB" = 25, "QC" = 8, "BC" = 2, "SK" = 75, "MB" = 100, "NL" = 1, "NB" = 1, "NS" = 1, "PEI" = 1, "YT" = 1, "NT" = 10, "NU" = NA)
-wave2beginings <- c("ON" = 150, "AB" = 150, "QC" = 125, "BC" = 115, "SK" = 140, "MB" = 132, "NL" = 140, "NB" = 140, "NS" = 160, "PEI" = 75, "YT" = 85, "NT" = 140, "NU" = NA)
+wave1beginings <- c("ON" = 10, "AB" = 1, "QC" = 8, "BC" = 2, "SK" = 75, "MB" = 100, "NL" = 1, "NB" = 1, "NS" = 1, "PEI" = 1, "YT" = 1, "NT" = 10, "NU" = NA)
+wave2beginings <- c("ON" = 140, "AB" = 66, "QC" = 125, "BC" = 115, "SK" = 140, "MB" = 132, "NL" = 140, "NB" = 140, "NS" = 160, "PEI" = 75, "YT" = 85, "NT" = 140, "NU" = NA)
 egfs <- sapply(names(splitintervalCases)[names(splitintervalCases) != "NU"], function(provinceName){
   beginingwave1 <- wave1beginings[provinceName]
   beginingwave2 <- wave2beginings[provinceName]
     provincetimeseries <- data.frame(splitintervalCases[names(splitintervalCases) == provinceName])[4][,1][2:length(data.frame(splitintervalCases[names(splitintervalCases) == provinceName])[4][,1])]
   dates <- anytime::anydate(data.frame(splitintervalCases[names(splitintervalCases) == provinceName])[1][,1])
+  ##Normally select the peak of the first wave to cut off the fitting window.
   theLast <- which.max(provincetimeseries[beginingwave1:beginingwave2]) + beginingwave1
+  ##Manual tweaks to improve the fitting window.
   if (provinceName == "NL"){
       theLast <- theLast + 1
   }
-  else{
+  else if (provinceName == "AB"){
+    theLast <- 40
   }
+   else if (provinceName == "ON"){
+    theLast <- theLast - 12
+   } 
+  realLast <- length(provincetimeseries)
+  if (provinceName == "ON"){
+    realLast <- realLast - 5
+  }
+
   return(list("first" = egf_init(date = dates, cases = provincetimeseries, first = beginingwave1, last = theLast),
-              "second" = egf_init(date = dates, cases = provincetimeseries, first = beginingwave2, last = length(provincetimeseries))
+              "second" = egf_init(date = dates, cases = provincetimeseries, first = beginingwave2, last = realLast)
               )
          )
   })
@@ -142,7 +153,13 @@ table1 <- make_table(wave1egfs)
 ```
 
 ```{r}
-
+i <- 1
+while (i <= length(egfs)){
+  print(colnames(egfs)[i])
+  plot(egf(egfs[[1, colnames(egfs[i])]]))
+  plot(egf(egfs[[2, colnames(egfs[i])]]))
+  i <- i+ 1
+}
 
 ```
 
