@@ -4,7 +4,9 @@ author: "Zachary Levine"
 date: '2020-10-27'
 output: 
   pdf_document:
-    extra_dependencies: ["flafter"]
+      includes:
+        in_header: 4mbapreamble.tex
+      extra_dependencies: ["flafter"]
 ---
 
 ```{r setup, include=FALSE}
@@ -14,104 +16,67 @@ knitr::opts_chunk$set(fig.pos = "!H", out.extra = "")
 
 ## Importing libraries and loading data
 
-```{r echo=FALSE, message=, warning=FALSE, dev="tikz", results="hide"}
+```{r echo=FALSE, message= FALSE, warning=FALSE, dev="tikz", results="hide"}
 library(epigrowthfit)
 library(tikzDevice)
 library(Hmisc)
 library(dplyr)
 library(anytime)
 library(chron)
-##Start by downloading recent data.
-mike.li.covid.site <- "https://wzmli.github.io/COVID19-Canada/"
+
 covid.canada.filename <- "COVID19_Canada.csv"
-download.file(paste0(mike.li.covid.site,covid.canada.filename), covid.canada.filename)
-#This gives data.frame of prevalence for all proviences and all dates.
+#This gives a data.frame of prevalence for all proviences and all dates.
 ##Exclude Nunavut, since no reported cases.
 allcases <- read.csv(covid.canada.filename)[,c("Province", "Date", "confirmed_positive", "Note")]
 ##Turn that into a list of each province's interval reported cases time series.
 ##Get rid of rows with duplicate dates, such as (NL-2020-03-25), by removing the duplicated date and adding its case reports to first report for that date.
 ##First grab the indices of the original dates one row above the repeated dates.
+
 originalDateIndices <- (diff(anytime::anydate(allcases$Date)) == 0)[c(2:length(diff(anytime::anydate(allcases$Date)) == 0), FALSE)]
 ##Add the second case report to the first.
 allcases[originalDateIndices, "confirmed_positive"] <- allcases[originalDateIndices, "confirmed_positive"] + allcases[diff(anytime::anydate(allcases$Date)) == 0, "confirmed_positive"]
 ##Get rid of the duplicate dates.
 allcases <- allcases[!diff(anytime::anydate(allcases$Date)) == 0,]
+##For each province, holds the index for the start of the waves
+wave1beginings <- c("ON" = 10, "AB" = 1, "QC" = 8, "BC" = 2, "SK" = 1, "MB" = 1, "NL" = 1, "NB" = 1, "NS" = 1, "PEI" = 1, "YT" = 1, "NT" = 10, "NU" = NA)
+wave2beginings <- c("ON" = 140, "AB" = 66, "QC" = 125, "BC" = 50, "SK" = 148, "MB" = 120, "NL" = 130, "NB" = 140, "NS" = 160, "PEI" = 75, "YT" = 85, "NT" = 140, "NU" = NA)
 splitintervalCases <- lapply(as.vector(unique(allcases$Province)), function(provinceName){
   ##For each province, select all the data corresponding to that province.
   casesdf <- allcases[as.vector(allcases$Province) == provinceName,]
   ##Get rid of missing values.
   casesdf <- casesdf[!is.na(casesdf$"confirmed_positive"),]
   ##Derive interval incidence by differencing (discarding the first reported entry to align all the columns and keep them the same length), keeping the column for each provience as a check to make sure we're doing everthing properly.
-  intervalcasesdf <- bind_cols("Date" = casesdf$"Date",
+intervalcasesdf <- bind_cols("Date" = casesdf$"Date",
                            "Province" =  casesdf$"Province",
                            "Note" = casesdf$"Note",
                            "intervalCases" = c(0, diff(casesdf$"confirmed_positive", lag = 1)))
   ##Some row of contain a negative value, so let's get rid of them
   intervalcasesdf <- intervalcasesdf[intervalcasesdf$intervalCases >= 0,]
   ##Make a list of sums of weekend case reports such that the ith element is the sum of the reported cases on Saturday and Sunday for the ith weekend.
-    faultyWeekends <- function(correspond = "weekend"){
-    i <- 1
-    faultyWeekendslist <- c()
-    isFaulty <- FALSE
-    while (i <= nrow(intervalcasesdf)){
-      if (is.weekend(anytime::anydate(intervalcasesdf[[i, "Date"]]))){
-       ##Because we're moving in order, we should have a Saturday first.
-        if (i + 2 <= nrow(intervalcasesdf)){
-          #Select only Saturdays by making sure the day after is a weekend.
-  if (format(as.Date(anytime::anydate(intervalcasesdf[[i, "Date"]])), '%A') == "Saturday"){
-    ##Normally, do a check for zero weekend reports and nonzero Monday reports.
-    isFaulty <- is.weekend(anytime::anydate(intervalcasesdf[[i+1, "Date"]])) & intervalcasesdf[[i, "intervalCases"]] == 0 & intervalcasesdf[[i + 1, "intervalCases"]] == 0 & intervalcasesdf[[i+2, "intervalCases"]] != 0
-    ##If we have note data, check that too.
-    if (!is.na(intervalcasesdf[[i, "Note"]]) && !is.na(intervalcasesdf[[i+1, "Note"]])) {
-       isFaulty <- isFaulty & intervalcasesdf[[i, "Note"]] == "did not update" | intervalcasesdf[[i+1, "Note"]] == "did not update"
-    }
-  }
-        }
-      }
-      if (correspond == "weekend"){
-        faultyWeekendslist <- c(faultyWeekendslist, isFaulty)
-      }
-      else{
-          faultyWeekendslist <- c(faultyWeekendslist, isFaulty)
-      }
-    i <- i + 1
-  }
-  return(faultyWeekendslist)
-  }
-  thefaultyWeekends <- faultyWeekends("weekend")
-  thefaultyMondays <- faultyWeekends("monday")
-  weekendSums <- c()
-  weekendeports <- as.list(intervalcasesdf[is.weekend(anytime::anydate(intervalcasesdf$Date)),"intervalCases"])$intervalCases
-  i <- 1
-  while (i <= length(weekendeports)){
-    if (i %% 2 == 0){
-      weekendSums <- c(weekendSums, weekendeports[i] +  weekendeports[i - 1])
-    }
-    else{
-    }
-    i <- i + 1
-  }
+  
+  if (provinceName == "BC" || provinceName  == "AB"){
+  weekendSums <- as.list(intervalcasesdf[ format(as.Date(anytime::anydate(intervalcasesdf$Date)), '%A') == "Saturday","intervalCases"])$intervalCases +
+  as.list(intervalcasesdf[format(as.Date(anytime::anydate(intervalcasesdf$Date)), '%A') == "Sunday","intervalCases"])$intervalCases
   ##Make a list corresponding to the Mondays that need to be modified because weekends were wrong.
   mondayIndices <- format(as.Date(anytime::anydate(intervalcasesdf$Date)), '%A') == "Monday"
-  ##Make the Monday cases the sum of the Monday cases the case reports on the weekends
-  intervalcasesdf[mondayIndices,"intervalCases"] <- intervalcasesdf[mondayIndices,"intervalCases"] + weekendSums
+  ##Make the Monday cases the sum of the Monday cases the case reports on the weekends for BC.
+  intervalcasesdf[mondayIndices,"intervalCases"] <- c(0, weekendSums[1:length(weekendSums)-1]) + intervalcasesdf[mondayIndices,"intervalCases"]
   ##Remove the weekends.
   intervalcasesdf <- intervalcasesdf[!is.weekend(anytime::anydate(intervalcasesdf$Date)),]
+  }
+  else{
+  }
   return(intervalcasesdf)
-  ##uncomment to return leenumbers.
-  ##return(leenumbers)
-})
+  })
 names(splitintervalCases) <- as.vector(unique(allcases$Province))
+
 ##Make a list of instantiated egf objects for each wave and each province.
 ##We have to difference the cumulative cases to get interval cases, but in doing so we get rid of the first case report. Set it to zero to make the data frame with all columns of the same length, but get rid of it before initializing egf objects.
 ##Each element of egfs is a list for the corresponding province containing the egf_init object for the first wave and the second wave separately.
-##For each province, holds the index for the start of the waves
-wave1beginings <- c("ON" = 10, "AB" = 1, "QC" = 8, "BC" = 2, "SK" = 75, "MB" = 100, "NL" = 1, "NB" = 1, "NS" = 1, "PEI" = 1, "YT" = 1, "NT" = 10, "NU" = NA)
-wave2beginings <- c("ON" = 140, "AB" = 66, "QC" = 125, "BC" = 115, "SK" = 140, "MB" = 132, "NL" = 140, "NB" = 140, "NS" = 160, "PEI" = 75, "YT" = 85, "NT" = 140, "NU" = NA)
 egfs <- sapply(names(splitintervalCases)[names(splitintervalCases) != "NU"], function(provinceName){
   beginingwave1 <- wave1beginings[provinceName]
   beginingwave2 <- wave2beginings[provinceName]
-    provincetimeseries <- data.frame(splitintervalCases[names(splitintervalCases) == provinceName])[4][,1][2:length(data.frame(splitintervalCases[names(splitintervalCases) == provinceName])[4][,1])]
+    provincetimeseries <- data.frame(splitintervalCases[names(splitintervalCases) == provinceName])[4][,1][1:length(data.frame(splitintervalCases[names(splitintervalCases) == provinceName])[4][,1])]
   dates <- anytime::anydate(data.frame(splitintervalCases[names(splitintervalCases) == provinceName])[1][,1])
   ##Normally select the peak of the first wave to cut off the fitting window.
   theLast <- which.max(provincetimeseries[beginingwave1:beginingwave2]) + beginingwave1
@@ -125,15 +90,40 @@ egfs <- sapply(names(splitintervalCases)[names(splitintervalCases) != "NU"], fun
    else if (provinceName == "ON"){
     theLast <- theLast - 12
    } 
+  else if (provinceName == "MB"){
+    theLast <-   14
+  }
+  else{
+  }
   realLast <- length(provincetimeseries)
   if (provinceName == "ON"){
     realLast <- realLast - 5
   }
-
-  return(list("first" = egf_init(date = dates, cases = provincetimeseries, first = beginingwave1, last = theLast),
-              "second" = egf_init(date = dates, cases = provincetimeseries, first = beginingwave2, last = realLast)
-              )
-         )
+  theDist <- "nbinom"
+##Override window fitting with peak selection to produce better fits for a few regions
+  if (provinceName == "NL"){
+    theSecond <- egf_init(date = dates, cases = provincetimeseries, distr = theDist, peak = 145)
+  }
+    if (provinceName == "SK"){
+    theSecond <- egf_init(date = dates, cases = provincetimeseries, distr = theDist, peak = 167)
+  }
+  else if (provinceName == "NB"){
+      theSecond <- egf_init(date = dates, cases = provincetimeseries, distr = theDist, peak = 151)
+  }
+    else if (provinceName == "NS"){
+      theSecond <- egf_init(date = dates, cases = provincetimeseries,distr = theDist, peak = 168)
+    }
+    else if (provinceName == "PEI"){
+      theSecond <- egf_init(date = dates, cases = provincetimeseries, distr = theDist, peak = 108)
+    }
+    else if (provinceName == "QC"){
+      theSecond <- egf_init(date = dates, cases = provincetimeseries, distr = theDist, peak = 162)
+  }
+  else{
+      theSecond <- egf_init(date = dates, cases = provincetimeseries, distr = theDist, first = beginingwave2, last = realLast)
+  }
+  return(list("first" = egf_init(date = dates, cases = provincetimeseries,distr = theDist, first = beginingwave1, last = theLast),
+              "second" = theSecond))
   })
 names(egfs) <- names(splitintervalCases)[names(splitintervalCases) != "NU"]
 egfs <- data.frame(egfs)
@@ -148,24 +138,23 @@ make_table <- function(egflist){
                            return(x$theta0[1])}),
                          "Doubling Time"= sapply(egflist, epigrowthfit::compute_doubling_time),
                          "Reproduction Number" = sapply(1:length(egflist), function(x){return(1)})))
-  }
-table1 <- make_table(wave1egfs)
+}
+#table1 <- make_table(wave1egfs)
 ```
 
 ```{r}
 i <- 1
 while (i <= length(egfs)){
-  print(colnames(egfs)[i])
+  print(colnames(egfs[i]))
   plot(egf(egfs[[1, colnames(egfs[i])]]))
   plot(egf(egfs[[2, colnames(egfs[i])]]))
   i <- i+ 1
 }
-
 ```
 
 
 Table for the second wave.
 ```{r, results = "asis"}
 options(omitlatexcom = TRUE)
-Hmisc::latex(table1, title = "", rowname = "", file = "")
+#Hmisc::latex(table1, title = "", rowname = "", file = "")
 ```
