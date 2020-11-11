@@ -53,13 +53,11 @@ intervalcasesdf <- bind_cols("Date" = casesdf$"Date",
   ##Some row of contain a negative value, so let's get rid of them
   intervalcasesdf <- intervalcasesdf[intervalcasesdf$intervalCases >= 0,]
   ##Make a list of sums of weekend case reports such that the ith element is the sum of the reported cases on Saturday and Sunday for the ith weekend.
-  
   if (provinceName == "BC" || provinceName  == "AB"){
   weekendSums <- as.list(intervalcasesdf[ format(as.Date(anytime::anydate(intervalcasesdf$Date)), '%A') == "Saturday","intervalCases"])$intervalCases +
   as.list(intervalcasesdf[format(as.Date(anytime::anydate(intervalcasesdf$Date)), '%A') == "Sunday","intervalCases"])$intervalCases
-  ##Make a list corresponding to the Mondays that need to be modified because weekends were wrong.
   mondayIndices <- format(as.Date(anytime::anydate(intervalcasesdf$Date)), '%A') == "Monday"
-  ##Make the Monday cases the sum of the Monday cases the case reports on the weekends for BC.
+  ##If the weekend reports were zero and the monday report was not, assume improper reporting and make the Monday cases the sum of the Monday cases the case reports on the weekends.
   intervalcasesdf[mondayIndices,"intervalCases"] <- c(0, weekendSums[1:length(weekendSums)-1]) + intervalcasesdf[mondayIndices,"intervalCases"]
   ##Remove the weekends.
   intervalcasesdf <- intervalcasesdf[!is.weekend(anytime::anydate(intervalcasesdf$Date)),]
@@ -101,29 +99,39 @@ egfs <- sapply(names(splitintervalCases)[names(splitintervalCases) != "NU"], fun
   }
   theDist <- "nbinom"
 ##Override window fitting with peak selection to produce better fits for a few regions
-  if (provinceName == "NL"){
-    theSecond <- egf_init(date = dates, cases = provincetimeseries, distr = theDist, peak = 145)
+  if (provinceName %in% c("QC", "NL", "SK", "NB", "NS", "NT", "PEI")){
+    if (provinceName == "NL"){
+      thePeak <- 145
+    }
+    else if (provinceName == "SK"){
+    thePeak <- 167
   }
-    if (provinceName == "SK"){
-    theSecond <- egf_init(date = dates, cases = provincetimeseries, distr = theDist, peak = 167)
-  }
-  else if (provinceName == "NB"){
-      theSecond <- egf_init(date = dates, cases = provincetimeseries, distr = theDist, peak = 151)
+    else if (provinceName == "NB"){
+      thePeak <- 211
   }
     else if (provinceName == "NS"){
-      theSecond <- egf_init(date = dates, cases = provincetimeseries,distr = theDist, peak = 168)
+      thePeak <- 232
+    }
+      else if (provinceName == "NT"){
+      tthePeak <- 214
     }
     else if (provinceName == "PEI"){
-      theSecond <- egf_init(date = dates, cases = provincetimeseries, distr = theDist, peak = 108)
+      thePeak  <- 151
     }
     else if (provinceName == "QC"){
-      theSecond <- egf_init(date = dates, cases = provincetimeseries, distr = theDist, peak = 162)
+      thePeak <- 162
+    }
+    else{
+    }
+    theSecond <- egf_init(date = dates, cases = provincetimeseries, distr = theDist, peak = thePeak)
   }
   else{
+    ##Otherwise set the fitting window manulaly
       theSecond <- egf_init(date = dates, cases = provincetimeseries, distr = theDist, first = beginingwave2, last = realLast)
   }
-  return(list("first" = egf_init(date = dates, cases = provincetimeseries,distr = theDist, first = beginingwave1, last = theLast),
-              "second" = theSecond))
+  return(list("first" = egf_init(date = dates, cases = provincetimeseries, distr = theDist, first = beginingwave1, last = theLast),
+              "second" = theSecond)
+         )
   })
 names(egfs) <- names(splitintervalCases)[names(splitintervalCases) != "NU"]
 egfs <- data.frame(egfs)
@@ -143,7 +151,7 @@ make_table <- function(egflist){
 ```
 
 ```{r}
-i <- 1
+i <- 12
 while (i <= length(egfs)){
   print(colnames(egfs[i]))
   plot(egf(egfs[[1, colnames(egfs[i])]]))
