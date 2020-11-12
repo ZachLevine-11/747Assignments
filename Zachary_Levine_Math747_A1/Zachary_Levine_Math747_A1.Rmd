@@ -48,11 +48,11 @@ allcases <- allcases[!diff(anytime::anydate(allcases$Date)) == 0,]
 ##YT has very small peaks (1), but if we consider that as a wave than there are at least of them.
 ##Fitting were determined for the most part by visual inspection.
 #Only one wave in NL
-wave1beginings <- c("ON" = 11, "AB" = 2, "QC" = 5, "BC" = 1, "SK" = 5, "MB" = 1, "NL" = 1, "NB" = 1, "NS" = 1, "PEI" = 1, "YT" = 1, "NT" = 1, "NU" = NA)
-wave1endings <- c("ON" = 77 , "AB" = 38, "QC" = 29, "BC" = 9, "SK" = 16, "MB" = 16, "NL" = 7, "NB" = 19, "NS" = 34, "PEI" = 12, "YT" = 7, "NT" = 22, "NU" = NA)
-wave2beginings <- list("ON" = 188, "AB" = 133, "QC" = 185, "BC" = 151, "SK" = 194, "MB" = 195, "NL" = 221, "NB" = 185, "NS" = 220, "PEI" = 163, "YT" = 201, "NT" = 200, "NU" = NA)
+wave1beginings <- c("ON" = 11, "AB" = 2, "QC" = 5, "BC" = 1, "SK" = 5, "MB" = 1, "NL" = 1, "NB" = 3, "NS" = 1, "PEI" = 1, "YT" = 1, "NT" = 1, "NU" = NA)
+wave1endings <- c("ON" = 77 , "AB" = 38, "QC" = 29, "BC" = 9, "SK" = 16, "MB" = 16, "NL" = 7, "NB" = 23, "NS" = 34, "PEI" = 12, "YT" = 7, "NT" = 22, "NU" = NA)
+wave2beginings <- list("ON" = 188, "AB" = 133, "QC" = 185, "BC" = 151, "SK" = 194, "MB" = 195, "NL" = 221, "NB" = 198, "NS" = 213, "PEI" = 200, "YT" = 201, "NT" = 200, "NU" = NA)
 ##Pass "end" to the pipeline to specify that we should end the second wave at the last possible observation date.
-wave2endings <- c("ON" = "end", "AB" = 173, "QC" = 212, "BC" = "end" , "SK" = "end", "MB" = "end", "NL" = 229, "NB" = 210, "NS" = "end", "PEI" = 174, "YT" = 216 , "NT" = 214, "NU" = NA)
+wave2endings <- c("ON" = "end", "AB" = 173, "QC" = 212, "BC" = "end" , "SK" = "end", "MB" = "end", "NL" = 229, "NB" = 210, "NS" = "end", "PEI" = 170, "YT" = 216 , "NT" = 214, "NU" = NA)
 splitintervalCases <- lapply(as.vector(unique(allcases$Province)), function(provinceName){
   ##For each province, select all the data corresponding to that province.
   casesdf <- allcases[as.vector(allcases$Province) == provinceName,]
@@ -95,26 +95,40 @@ egfs <- sapply(names(splitintervalCases)[names(splitintervalCases) != "NU"], fun
     endingwave2 <- length(provincetimeseries)
   }
   else{
-    ##Class system gets a bit messed up for some reason.
-        endingwave2 <- as.numeric(endingwave2)
+    endingwave2 <- as.numeric(endingwave2)
   }
   ##We get better fits for some provinces with this stuff.
   if (provinceName %in% c("QC", "BC", "NL")){
+    ##Overriding the default first wave.
     if (provinceName =="NL"){
-      theFirst <- egf_init(cases = nn$intervalCases, date = anytime::anydate(nn$Date), first = 1, last = 9)
+      theFirst <- egf_init(cases = provincetimeseries, date = dates, first = 1, last = 9)
     }
     else{
-    theFirst <- egf_init(date = dates, cases = provincetimeseries, first = beginingwave1, last = endingwave1)    }
+    theFirst <- egf_init(date = dates, cases = provincetimeseries, first = beginingwave1, last = endingwave1)
+    }
+    ##Overriding the default for the second wave.
     if (provinceName == "QC"){
     theSecond <- (egf_init(cases = splitintervalCases$QC$intervalCases, date = anydate(splitintervalCases$QC$Date), first = 165, peak = 212))
     }
+    else if (provinceName == "NL"){
+      theSecond <- egf_init(date = dates, cases = provincetimeseries, peak = 230)
+    }
     else{
-          theSecond <- egf_init(cases = provincetimeseries, date = dates, first = beginingwave2)
+        theSecond <- egf_init(cases = provincetimeseries, date = dates, first = beginingwave2)
     }
   }
+  ##These seem to work best with this setting.
+  else if (provinceName %in% c("NB", "NS")){
+  theFirst <- egf_init(cases = provincetimeseries, date = dates, first = beginingwave1, distr = "pois")
+  theSecond <- egf_init(cases = provincetimeseries, date = dates, first = beginingwave2, peak = endingwave2, distr = "pois")
+  }
+  else if (provinceName == "PEI"){
+  theFirst <- egf_init(cases = provincetimeseries, date = dates, first = beginingwave1, distr = "pois")
+  theSecond <- egf_init(date = anydate(splitintervalCases$NL$Date), cases = splitintervalCases$NL$intervalCases, first = beginingwave2, peak = 205, distr = "pois")
+  }
   else{
-    theFirst <- egf_init(date = dates, cases = provincetimeseries, first = beginingwave1, last = endingwave1)
-    theSecond <- egf_init(date = dates, cases = provincetimeseries, first = beginingwave2, last = endingwave2)
+  theFirst <- egf_init(date = dates, cases = provincetimeseries, first = beginingwave1, last = endingwave1)
+  theSecond <- egf_init(date = dates, cases = provincetimeseries, first = beginingwave2)
   }
   return(list("first" = theFirst,
               "second" = theSecond
@@ -140,7 +154,7 @@ make_table <- function(egflist){
 
 ```{r}
 ##To check model fits.
-i <- 7
+i <- 10
 while (i <= length(egfs)){
   print(colnames(egfs[i]))
   plot(egf(egfs[[1, colnames(egfs[i])]]))
