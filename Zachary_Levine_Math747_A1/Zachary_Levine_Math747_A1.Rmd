@@ -23,7 +23,7 @@ library(Hmisc)
 library(dplyr)
 library(anytime)
 library(chron)
-
+##There should be no math in the executive summary. Explain clearly what you're talking about, but make sure the executive summary is accessible very broadly.
 covid.canada.filename <- "COVID19_Canada.csv"
 #This gives a data.frame of prevalence for all proviences and all dates.
 ##Exclude Nunavut, since no reported cases.
@@ -31,7 +31,7 @@ allcases <- read.csv(covid.canada.filename)[,c("Province", "Date", "confirmed_po
 ##Turn that into a list of each province's interval reported cases time series.
 ##Get rid of rows with duplicate dates, such as (NL-2020-03-25), by removing the duplicated date and adding its case reports to first report for that date.
 ##First grab the indices of the original dates one row above the repeated dates.
-
+##Can explain that there was one case in NU so there's nothing to discuss there.
 originalDateIndices <- (diff(anytime::anydate(allcases$Date)) == 0)[c(2:length(diff(anytime::anydate(allcases$Date)) == 0), FALSE)]
 ##Add the second case report to the first.
 allcases[originalDateIndices, "confirmed_positive"] <- allcases[originalDateIndices, "confirmed_positive"] + allcases[diff(anytime::anydate(allcases$Date)) == 0, "confirmed_positive"]
@@ -139,7 +139,7 @@ egfs <- sapply(names(splitintervalCases)[names(splitintervalCases) != "NU"], fun
   theFirst <- egf_init(date = dates, cases = provincetimeseries, first = beginingwave1, last = endingwave1)
   theSecond <- egf_init(date = dates, cases = provincetimeseries, first = beginingwave2)
   }
-  ##We should the epigrowthfit objects at the same time.
+  ##We should make the epigrowthfit objects at the same time.
   return(list("first" = egf(theFirst),
               "second" = egf(theSecond)
 )
@@ -147,20 +147,40 @@ egfs <- sapply(names(splitintervalCases)[names(splitintervalCases) != "NU"], fun
   })
 names(egfs) <- names(splitintervalCases)[names(splitintervalCases) != "NU"]
 egfs <- data.frame(egfs)
+##Make it so we have each province as a row with columns first, seconds for the two waves.
+egfs <- t(egfs)
 ```
 
-```{r, echo = FALSE results = "asis"}
+Parameter estimates for epidemic wave one.
+```{r, echo = FALSE, results = "asis"}
+##Maybe don't do the territories.
 ##Make the table.
-make_table <- function(egf_df){
-  return(data.frame("Province" = as.vector(colnames(egf_df)),
-                         "Exponential Growth Rate" = sapply(egf_df, function(x){
-                           return(x$theta0[1])}),
-                         "Doubling Time"= sapply(egf_df, epigrowthfit::compute_doubling_time),
-                         "Reproduction Number" = sapply(1:length(egf_df), function(x){return(1)})))
+make_table <- function(egf_df, wave = "first"){
+  data("covid_generation_interval")
+  growthRates <- c()
+  R0s <- c()
+  doublingTimes <- c()
+  i <- 1
+  while (i <= nrow(egf_df)){
+    egfobj <- egf_df[[i, wave]]
+    growthRates <- c(growthRates, egfobj$theta_fit[1])
+    R0s <- c(R0s, compute_R0(egfobj, breaks = covid_generation_interval$breaks, probs = covid_generation_interval$probs))
+    doublingTimes <- c(doublingTimes, compute_doubling_time(egfobj))
+    i <- i + 1
+  }
+  return(data.frame("Province" = unique(allcases$Province)[(unique(allcases$Province)) != "NU"],
+                         "Exponential Growth Rate" = growthRates,
+                         "Doubling Time"= doublingTimes ,
+                         "Reproduction Number" = R0s))
 }
 
 options(omitlatexcom = TRUE)
-Hmisc::latex(make_table(egfs), title = "Parameter estimates from fits for both waves", rowname = "", file = "")
+Hmisc::latex(make_table(egfs, wave = "first"), title = "", rowname = "", file = "")
+```
+
+Parameter estimates for epidemic wave two.
+```{r, echo = FALSE, results = "asis"}
+Hmisc::latex(make_table(egfs, wave = "second"), title = "", rowname = "", file = "")
 ```
 
 
@@ -168,10 +188,8 @@ Hmisc::latex(make_table(egfs), title = "Parameter estimates from fits for both w
 ##To check model fits.
 i <- 1
 while (i <= length(egfs)){
-  plot(egfs[[1, colnames(egfs[i])]])
-  plot(egfs[[2, colnames(egfs[i])]])
+  #plot(egfs[[1, colnames(egfs[i])]])
+  #plot(egfs[[2, colnames(egfs[i])]])
   i <- i+ 1
 }
-##To find fititing windows.
-#plot(smooth_cases(date = anydate(splitintervalCases$NL$Date), cases = splitintervalCases$NL$intervalCases, spar = 0.25, log = TRUE))
 ```
