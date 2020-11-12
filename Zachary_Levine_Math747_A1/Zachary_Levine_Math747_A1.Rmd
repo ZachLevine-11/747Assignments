@@ -166,7 +166,14 @@ make_table <- function(egf_df, wave = "first"){
   provincesList <- unique(allcases$Province)[!unique(allcases$Province) %in% ignore]
   while (i <= nrow(egf_df)){
     egfobj <- egf_df[[i, wave]]
-    plot(egfobj)
+    ##Only plot things once:
+    if (wave == "second"){
+      par(mfrow = c(2, 1))
+      plot(egf_df[[i, "first"]])
+      plot(egf_df[[i, "second"]], add = TRUE)
+    }
+    else{
+    }
     growthRates <- c(growthRates, egfobj$theta_fit[1])
     R0s <- c(R0s, compute_R0(egfobj, breaks = covid_generation_interval$breaks, probs = covid_generation_interval$probs))
     doublingTimes <- c(doublingTimes, compute_doubling_time(egfobj))
