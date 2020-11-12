@@ -154,7 +154,7 @@ egfs <- t(egfs)
 ```
 
 Tables and figures
-```{r, echo = FALSE, results = "asis"}
+```{r, echo = FALSE, warning=FALSE, results = "asis"}
 ##Maybe don't do the territories.
 ##Make the table.
 make_table <- function(egf_df, wave = "first"){
@@ -189,6 +189,6 @@ Hmisc::latex(make_table(egfs, wave = "first"), title = "", rowname = "", file = 
 ```
 
 Parameter estimates for epidemic wave two.
-```{r, echo = FALSE, results = "asis"}
+```{r, echo = FALSE, warning=FALSE, results = "asis"}
 Hmisc::latex(make_table(egfs, wave = "second"), title = "", rowname = "", file = "")
 ```
