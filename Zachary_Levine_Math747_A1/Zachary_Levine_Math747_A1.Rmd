@@ -38,8 +38,19 @@ allcases[originalDateIndices, "confirmed_positive"] <- allcases[originalDateIndi
 ##Get rid of the duplicate dates.
 allcases <- allcases[!diff(anytime::anydate(allcases$Date)) == 0,]
 ##For each province, holds the index for the start of the waves
-wave1beginings <- c("ON" = 10, "AB" = 1, "QC" = 8, "BC" = 2, "SK" = 1, "MB" = 1, "NL" = 1, "NB" = 1, "NS" = 1, "PEI" = 1, "YT" = 1, "NT" = 10, "NU" = NA)
-wave2beginings <- c("ON" = 140, "AB" = 66, "QC" = 125, "BC" = 50, "SK" = 148, "MB" = 120, "NL" = 130, "NB" = 140, "NS" = 160, "PEI" = 75, "YT" = 85, "NT" = 140, "NU" = NA)
+##Quebec fit for both waves won't be great because for both waves there is a period of exponential growth but the peak of the wave isn't reached, then we stop growing exponentially and then start again briefly before the peak. End the fitting window when growth becomes sub exponetial, regardless of if peak has occured yet.
+##BC grows slowly in the second wave for a bit until growth becomes exponential. Thus, the initial growth rate isn't strongly representative of the initial phase of the second wave. MB data displays the same trend but on a smaller scale.
+##SK has multiple mini waves before a big one starting late October, not just two waves. We chose the biggest two to be the ones to study, but this may not have been the best choice. At least three mini waves occur before what we denote as the first wave. May have been better to fit to them.
+##Only one real epidemic wave in NL. Fit the secon wave to a mostly flat second epidemic wave consiting of less than 5 cases at peak. Unclear if this makes any sense.
+##NB has a very small wave in between the two epidemic waves we fit. Didn't fit to it because to the other two were much larger in magnitude.
+##Second wave in NS is tiny.
+##PEI actually has four epidemic waves, the final three being very similar in size.
+##YT has very small peaks (1), but if we consider that as a wave than there are at least of them.
+wave1beginings <- c("ON" = 11, "AB" = 2, "QC" = 5, "BC" = 1, "SK" = 113, "MB" = 1, "NL" = 1, "NB" = 1, "NS" = 1, "PEI" = 1, "YT" = 1, "NT" = 1, "NU" = NA)
+wave1endings <- c("ON" = 77 , "AB" = 38, "QC" = 31, "BC" = 9, "SK" = 135, "MB" = 16, "NL" = 7, "NB" = 19, "NS" = 34, "PEI" = 12, "YT" = 7, "NT" = 22, "NU" = NA)
+wave2beginings <- c("ON" = 188, "AB" = 133, "QC" = 164, "BC" = 151, "SK" = 194, "MB" = 195, "NL" = 222, "NB" = 185, "NS" = 220, "PEI" = 163, "YT" = 201, "NT" = 200, "NU" = NA)
+##Pass "end" to the pipeline to specify that we should end the second wave at the last possible observation date.
+wave2endings <- c("ON" = "end", "AB" = 173, "QC" = 213, "BC" = "end" , "SK" = "end", "MB" = "end", "NL" = "end", "NB" = 210, "NS" = "end", "PEI" = 174, "YT" = 216 , "NT" = 214, "NU" = NA)
 splitintervalCases <- lapply(as.vector(unique(allcases$Province)), function(provinceName){
   ##For each province, select all the data corresponding to that province.
   casesdf <- allcases[as.vector(allcases$Province) == provinceName,]
@@ -72,65 +83,22 @@ names(splitintervalCases) <- as.vector(unique(allcases$Province))
 ##We have to difference the cumulative cases to get interval cases, but in doing so we get rid of the first case report. Set it to zero to make the data frame with all columns of the same length, but get rid of it before initializing egf objects.
 ##Each element of egfs is a list for the corresponding province containing the egf_init object for the first wave and the second wave separately.
 egfs <- sapply(names(splitintervalCases)[names(splitintervalCases) != "NU"], function(provinceName){
-  beginingwave1 <- wave1beginings[provinceName]
-  beginingwave2 <- wave2beginings[provinceName]
+  beginingwave1 <- as.numeric(wave1beginings[provinceName])
+  beginingwave2 <- as.numeric(wave2beginings[provinceName])
+  endingwave1 <- as.numeric(wave1endings[provinceName])
+  endingwave2 <- wave2endings[provinceName]
     provincetimeseries <- data.frame(splitintervalCases[names(splitintervalCases) == provinceName])[4][,1][1:length(data.frame(splitintervalCases[names(splitintervalCases) == provinceName])[4][,1])]
   dates <- anytime::anydate(data.frame(splitintervalCases[names(splitintervalCases) == provinceName])[1][,1])
-  ##Normally select the peak of the first wave to cut off the fitting window.
-  theLast <- which.max(provincetimeseries[beginingwave1:beginingwave2]) + beginingwave1
-  ##Manual tweaks to improve the fitting window.
-  if (provinceName == "NL"){
-      theLast <- theLast + 1
-  }
-  else if (provinceName == "AB"){
-    theLast <- 40
-  }
-   else if (provinceName == "ON"){
-    theLast <- theLast - 12
-   } 
-  else if (provinceName == "MB"){
-    theLast <-   14
+    if (endingwave2 == "end"){
+    endingwave2 <- length(provincetimeseries)
   }
   else{
+    ##Class system gets a bit messed up for some reason.
+        endingwave2 <- as.numeric(endingwave2)
   }
-  realLast <- length(provincetimeseries)
-  if (provinceName == "ON"){
-    realLast <- realLast - 5
-  }
-  theDist <- "nbinom"
-##Override window fitting with peak selection to produce better fits for a few regions
-  if (provinceName %in% c("QC", "NL", "SK", "NB", "NS", "NT", "PEI")){
-    if (provinceName == "NL"){
-      thePeak <- 145
-    }
-    else if (provinceName == "SK"){
-    thePeak <- 167
-  }
-    else if (provinceName == "NB"){
-      thePeak <- 211
-  }
-    else if (provinceName == "NS"){
-      thePeak <- 232
-    }
-      else if (provinceName == "NT"){
-      tthePeak <- 214
-    }
-    else if (provinceName == "PEI"){
-      thePeak  <- 151
-    }
-    else if (provinceName == "QC"){
-      thePeak <- 162
-    }
-    else{
-    }
-    theSecond <- egf_init(date = dates, cases = provincetimeseries, distr = theDist, peak = thePeak)
-  }
-  else{
-    ##Otherwise set the fitting window manulaly
-      theSecond <- egf_init(date = dates, cases = provincetimeseries, distr = theDist, first = beginingwave2, last = realLast)
-  }
-  return(list("first" = egf_init(date = dates, cases = provincetimeseries, distr = theDist, first = beginingwave1, last = theLast),
-              "second" = theSecond)
+  return(list("first" = egf_init(date = dates, cases = provincetimeseries, first = beginingwave1, last = endingwave1),
+              "second" = egf_init(date = dates, cases = provincetimeseries, first = beginingwave2, last = endingwave2)
+)
          )
   })
 names(egfs) <- names(splitintervalCases)[names(splitintervalCases) != "NU"]
@@ -151,7 +119,8 @@ make_table <- function(egflist){
 ```
 
 ```{r}
-i <- 12
+##To check model fits.
+i <- 1
 while (i <= length(egfs)){
   print(colnames(egfs[i]))
   plot(egf(egfs[[1, colnames(egfs[i])]]))
@@ -163,6 +132,10 @@ while (i <= length(egfs)){
 
 Table for the second wave.
 ```{r, results = "asis"}
+
+##Contains how to push the labels for doubling time off the curve.
+##plot(egf(egfs$ON$first),style = list("text_dbl" = c("offset" = 15)), annotate = TRUE)
+
 options(omitlatexcom = TRUE)
 #Hmisc::latex(table1, title = "", rowname = "", file = "")
 ```
