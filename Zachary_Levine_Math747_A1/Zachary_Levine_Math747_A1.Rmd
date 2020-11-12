@@ -46,11 +46,12 @@ allcases <- allcases[!diff(anytime::anydate(allcases$Date)) == 0,]
 ##Second wave in NS is tiny.
 ##PEI actually has four epidemic waves, the final three being very similar in size.
 ##YT has very small peaks (1), but if we consider that as a wave than there are at least of them.
+##Fitting were determined for the most part by visual inspection.
 wave1beginings <- c("ON" = 11, "AB" = 2, "QC" = 5, "BC" = 1, "SK" = 113, "MB" = 1, "NL" = 1, "NB" = 1, "NS" = 1, "PEI" = 1, "YT" = 1, "NT" = 1, "NU" = NA)
-wave1endings <- c("ON" = 77 , "AB" = 38, "QC" = 31, "BC" = 9, "SK" = 135, "MB" = 16, "NL" = 7, "NB" = 19, "NS" = 34, "PEI" = 12, "YT" = 7, "NT" = 22, "NU" = NA)
-wave2beginings <- c("ON" = 188, "AB" = 133, "QC" = 164, "BC" = 151, "SK" = 194, "MB" = 195, "NL" = 222, "NB" = 185, "NS" = 220, "PEI" = 163, "YT" = 201, "NT" = 200, "NU" = NA)
+wave1endings <- c("ON" = 77 , "AB" = 38, "QC" = 29, "BC" = 9, "SK" = 135, "MB" = 16, "NL" = 7, "NB" = 19, "NS" = 34, "PEI" = 12, "YT" = 7, "NT" = 22, "NU" = NA)
+wave2beginings <- c("ON" = 188, "AB" = 133, "QC" = 165, "BC" = 151, "SK" = 194, "MB" = 195, "NL" = 222, "NB" = 185, "NS" = 220, "PEI" = 163, "YT" = 201, "NT" = 200, "NU" = NA)
 ##Pass "end" to the pipeline to specify that we should end the second wave at the last possible observation date.
-wave2endings <- c("ON" = "end", "AB" = 173, "QC" = 213, "BC" = "end" , "SK" = "end", "MB" = "end", "NL" = "end", "NB" = 210, "NS" = "end", "PEI" = 174, "YT" = 216 , "NT" = 214, "NU" = NA)
+wave2endings <- c("ON" = "end", "AB" = 173, "QC" = "214", "BC" = "end" , "SK" = "end", "MB" = "end", "NL" = "end", "NB" = 210, "NS" = "end", "PEI" = 174, "YT" = 216 , "NT" = 214, "NU" = NA)
 splitintervalCases <- lapply(as.vector(unique(allcases$Province)), function(provinceName){
   ##For each province, select all the data corresponding to that province.
   casesdf <- allcases[as.vector(allcases$Province) == provinceName,]
@@ -96,8 +97,21 @@ egfs <- sapply(names(splitintervalCases)[names(splitintervalCases) != "NU"], fun
     ##Class system gets a bit messed up for some reason.
         endingwave2 <- as.numeric(endingwave2)
   }
-  return(list("first" = egf_init(date = dates, cases = provincetimeseries, first = beginingwave1, last = endingwave1),
-              "second" = egf_init(date = dates, cases = provincetimeseries, first = beginingwave2, last = endingwave2)
+  ##We get better fits for some provinces with this stuff.
+  if (provinceName %in% c("QC", "BC", "NL")){
+    if (provinceName =="NL"){
+      theFirst <- egf_init(cases = provincetimeseries, date = dates, last = endingwave2)
+    }
+    else{
+    theFirst <- egf_init(date = dates, cases = provincetimeseries, first = beginingwave1, last = endingwave1)    }
+    theSecond <- egf_init(cases = provincetimeseries, date = dates, first = beginingwave2)
+  }
+  else{
+    theFirst <- egf_init(date = dates, cases = provincetimeseries, first = beginingwave1, last = endingwave1)
+    theSecond <- egf_init(date = dates, cases = provincetimeseries, first = beginingwave2, last = endingwave2)
+  }
+  return(list("first" = theFirst,
+              "second" = theSecond
 )
          )
   })
@@ -120,7 +134,7 @@ make_table <- function(egflist){
 
 ```{r}
 ##To check model fits.
-i <- 1
+i <- 7
 while (i <= length(egfs)){
   print(colnames(egfs[i]))
   plot(egf(egfs[[1, colnames(egfs[i])]]))
