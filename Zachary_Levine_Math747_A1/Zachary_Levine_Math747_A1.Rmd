@@ -60,6 +60,12 @@ splitintervalCases <- lapply(as.vector(unique(allcases$Province)), function(prov
   casesdf <- allcases[as.vector(allcases$Province) == provinceName,]
   ##Get rid of missing values.
   casesdf <- casesdf[!is.na(casesdf$"confirmed_positive"),]
+  ##Get rid of the anomaly report in NB.
+  if (provinceName == "NB"){
+    casesdf <- casesdf[casesdf$Date != "2020-04-02",]
+  }
+  else{
+  }
   ##Derive interval incidence by differencing (discarding the first reported entry to align all the columns and keep them the same length), keeping the column for each provience as a check to make sure we're doing everthing properly.
 intervalcasesdf <- bind_cols("Date" = casesdf$"Date",
                            "Province" =  casesdf$"Province",
@@ -82,7 +88,6 @@ intervalcasesdf <- bind_cols("Date" = casesdf$"Date",
   return(intervalcasesdf)
   })
 names(splitintervalCases) <- as.vector(unique(allcases$Province))
-
 ##Make a list of instantiated egf objects for each wave and each province.
 ##We have to difference the cumulative cases to get interval cases, but in doing so we get rid of the first case report. Set it to zero to make the data frame with all columns of the same length, but get rid of it before initializing egf objects.
 ##Each element of egfs is a list for the corresponding province containing the egf_init object for the first wave and the second wave separately.
@@ -110,19 +115,24 @@ egfs <- sapply(names(splitintervalCases)[!names(splitintervalCases) %in% ignore]
     }
     ##Overriding the default for the second wave.
     if (provinceName == "QC"){
-    theSecond <- (egf_init(cases = splitintervalCases$QC$intervalCases, date = anydate(splitintervalCases$QC$Date), first = 165, peak = 212))
+    theSecond <- (egf_init(cases = provincetimeseries, date = dates, first = 165, peak = 212))
     }
     else if (provinceName == "NL"){
-      theSecond <- egf_init(date = dates, cases = provincetimeseries, peak = 230)
+      theSecond <- egf_init(date = dates, cases = provincetimeseries, peak = 231, distr = "pois")
     }
     else{
         theSecond <- egf_init(cases = provincetimeseries, date = dates, first = beginingwave2)
     }
   }
   ##These seem to work best with this setting.
-  else if (provinceName %in% c("NB", "NS")){
+  else if (provinceName  == "NS"){
   theFirst <- egf_init(cases = provincetimeseries, date = dates, first = beginingwave1, distr = "pois")
   theSecond <- egf_init(cases = provincetimeseries, date = dates, first = beginingwave2, peak = endingwave2, distr = "pois")
+  }
+  else if (provinceName == "NB"){
+    theFirst <- egf_init(cases = provincetimeseries, date = dates, first = 3, last = 20, distr = "pois")
+      theSecond <- egf_init(cases = provincetimeseries, date = dates, first = beginingwave2, peak = endingwave2, distr = "pois")
+
   }
   else if (provinceName == "NT"){
     theFirst <- egf_init(cases = provincetimeseries, date = dates, first = beginingwave1, last = endingwave1, distr = "pois")
@@ -157,6 +167,17 @@ Tables and figures
 ```{r, echo = FALSE, warning=FALSE, results = "asis"}
 ##Maybe don't do the territories.
 ##Make the table.
+
+make_plots <- function(egf_df){
+  i <- 1
+  provincesList <- unique(allcases$Province)[!unique(allcases$Province) %in% ignore]
+  while (i <= nrow(egf_df)){
+    par(mfrow = c(2, 1))
+    plot(egf_df[[i, "first"]])
+    plot(egf_df[[i, "second"]], add = TRUE)
+    i <- i + 1
+  }
+}
 make_table <- function(egf_df, wave = "first"){
   data("covid_generation_interval")
   growthRates <- c()
@@ -166,14 +187,6 @@ make_table <- function(egf_df, wave = "first"){
   provincesList <- unique(allcases$Province)[!unique(allcases$Province) %in% ignore]
   while (i <= nrow(egf_df)){
     egfobj <- egf_df[[i, wave]]
-    ##Only plot things once:
-    if (wave == "second"){
-      par(mfrow = c(2, 1))
-      plot(egf_df[[i, "first"]])
-      plot(egf_df[[i, "second"]], add = TRUE)
-    }
-    else{
-    }
     growthRates <- c(growthRates, egfobj$theta_fit[1])
     R0s <- c(R0s, compute_R0(egfobj, breaks = covid_generation_interval$breaks, probs = covid_generation_interval$probs))
     doublingTimes <- c(doublingTimes, compute_doubling_time(egfobj))
@@ -184,11 +197,16 @@ make_table <- function(egf_df, wave = "first"){
                          "Doubling Time"= doublingTimes ,
                          "Reproduction Number" = R0s))
 }
-options(omitlatexcom = TRUE)
-Hmisc::latex(make_table(egfs, wave = "first"), title = "", rowname = "", file = "")
 ```
 
-Parameter estimates for epidemic wave two.
+Tables.
 ```{r, echo = FALSE, warning=FALSE, results = "asis"}
+options(omitlatexcom = TRUE)
+Hmisc::latex(make_table(egfs, wave = "first"), title = "", rowname = "", file = "")
 Hmisc::latex(make_table(egfs, wave = "second"), title = "", rowname = "", file = "")
+```
+
+Plots.
+```{r, echo = FALSE, warning=FALSE, results = "asis"}
+make_plots(egfs)
 ```
