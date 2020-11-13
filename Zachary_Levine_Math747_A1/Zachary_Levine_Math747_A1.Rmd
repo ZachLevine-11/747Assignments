@@ -15,7 +15,7 @@ knitr::opts_chunk$set(fig.pos = "!H", out.extra = "")
 ```
 
 ## Executive Summary
-Here, we summarize some key features for the provinces below. 
+Executive summary goes here.
 
 ## Key choices
 
@@ -176,19 +176,21 @@ make_table <- function(egf_df, wave = "first"){
   return(data.frame("Province" = unique(allcases$Province)[!unique(allcases$Province) %in% ignore],
                          "Exponential Growth Rate" = growthRates,
                          "Doubling Time"= doublingTimes ,
-                         "Reproduction Number" = R0s))
+                         "Basic Reproductive Number" = R0s))
 }
 options(omitlatexcom = TRUE)
 Hmisc::latex(make_table(egfs, wave = "first"), title = "", rowname = "", file = "")
 Hmisc::latex(make_table(egfs, wave = "second"), title = "", rowname = "", file = "")
 ```
 
-Make sure to answer
-- Why are some fits better than others?
-- How do the results differ among provinces?
-- Why do you think they differ?
-- Are there policy implications of your results that PHAC should consider?
-- What are the most important take-home messages for PHAC?
+
+#### How do the results differ among provinces, and why?
+
+British Columbia had the smallest ${\mathcal{\mathcal R_0}}$ of 1.164 in the first wave of the pandemic, and the second smallest ${\mathcal{\mathcal R_0}}$ of 1.09 durin the second wave (second only to Alberta), despite the province containing some of Canada's biggest and most densely populated urban centers, where one would expect transmission to be higher. In the first wave, BC also  longest doubling time of almost eleven days. The largest difference between BC and other provinces was the strength and effectiveness of the public health intervention strategy put in place by government officials. These policies and the adherence to them by British Columbians was largely responsible for BC's success in managing the first wave of the pandemic. If we take another densely populated province, Ontario as our prototypical example, one can see that while the two provinces implemented a province-wide state of emergency only one day apart (Ontario: March 17th, 2020, BC: March 18th), British Columbia had far fewer deaths in long term care homes because they managed those facilities more effectively. Indeed, ${\mathcal{\mathcal R_0}}$ in Ontario for the first wave was 1.455, much higher than British Columbia. However, the most important takeaway from this for public health officials is not that British Columbia did a good job in managing the pandemic at first. The message is that consistency of public health care interventions matters too. Indeed, COVID-19 cases in British Columbia picked up after that first wave, when BC relaxed their lockdown procedure. Looking at the graph, we can see that the begining of the second wave hit British Columbia just about at the end of May. It is no coincide that the government of British Columbia ended their lockdown on May 19th, 2020. Implementing good control measures for a pandemic is not enough - we need to stick by them.
+
+Interestingly the maritime provinces for both waves consistently had the highest ${\mathcal{\mathcal R_0}}$, shortest doubling times, and biggest exponential growth rates. We attribute this to the extreely low case counts for these provinces, which influenced model fit and made it difficult to estimate these properties exactly.
+
+All provinces had ${\mathcal{\mathcal R_0}} > 1$, for both waves indicating epidemics there.
 
 #### Negative binomial models: Ontario, Quebec, Alberta, Saskatchewan, British Columbia, and Manitoba
 
@@ -200,25 +202,48 @@ In Alberta and British Columbia, though weekend reporting was faulty, the correc
 
 Selecting the best fitting window for British Columbia was difficult because there were three distinct waves of epidemic there. One epidemic ran dfrom March to April, one from June to September, and one from October to November. I chose the first and final wave to fit models to. British Columbia interval incidence grows subexponentially for a significant chunk of the time series. Thus, the initial epidemic growth rate isn't strongly representative of the initial phase of the second wave, because cases counts grew very slowly for a long time, and then shot up. However, after selecting the appropraiate fitting window, the negative binomial model fit well because the dispersion parameter k was small for both waves (W1 = 3.9931, W2 = 1.822).
 
-In the first wave, BC had smallest R0. The largest difference between BC and Ontario was that BC had a stronger public health intervention strategy to manage the pandemic. BC's success in managing the first wave of the epidemic the importance of control strategies in managaing the epidemic. However, the fact that cases picked up after the first wave also shows the importance of sicking consistently to those interventions.
 
 ```{r, echo = FALSE, fig.height = 8, fig.width = 8, warning=FALSE, results = "asis"}
-province_plot <- function(egf_df, province){
+province_plot <- function(egf_df, province, annotate){
   par(mfrow = c(2, 1))
-  plot(egf_df[[province, "first"]])
-  plot(egf_df[[province, "second"]], add = TRUE)
+  plot(egf_df[[province, "first"]], annotate = annotate)
+  plot(egf_df[[province, "second"]], add = TRUE, annotate = annotate)
 }
-province_plot(egfs, "ON")
-province_plot(egfs, "QC")
-province_plot(egfs, "AB")
-province_plot(egfs, "SK")
-province_plot(egfs, "BC")
-province_plot(egfs, "MB")
+```
+
+##### Ontario
+```{r, echo = FALSE, fig.height = 8, fig.width = 8, warning=FALSE, results = "asis"}
+province_plot(egfs, "ON", annotate = TRUE)
+```
+
+#### Quebec
+```{r, echo = FALSE, fig.height = 8, fig.width = 8, warning=FALSE, results = "asis"}
+province_plot(egfs, "QC", annotate = TRUE)
+```
+
+##### Alberta
+```{r, echo = FALSE, fig.height = 8, fig.width = 8, warning=FALSE, results = "asis"}
+province_plot(egfs, "AB", annotate = TRUE)
+```
+
+##### Saskatechewan
+```{r, echo = FALSE, fig.height = 8, fig.width = 8, warning=FALSE, results = "asis"}
+province_plot(egfs, "SK", annotate = TRUE)
+```
+
+
+##### British Columbia
+```{r, echo = FALSE, fig.height = 8, fig.width = 8, warning=FALSE, results = "asis"}
+province_plot(egfs, "BC", annotate = TRUE)
+```
+
+
+##### Manitoba
+```{r, echo = FALSE, fig.height = 8, fig.width = 8, warning=FALSE, results = "asis"}
+province_plot(egfs, "MB", annotate = TRUE)
 ```
 
 #### Poisson Models: Newfoundland and Labrador, Nova Scotia, New Brunsiwck, and Prince Edward Island
-
-NL negbin wave 1, poisson wave 2. NS pois wave 1 and wave 2. NB pois wave 1 and wave 2. pei pois wave 1 and wave 2
 
 There was only one real epidemic wave in Newfoundland and Labrador. However, the dispersion parameter k for the fitted model was 0.674, much below the threshold value as defined in the vignette, which explains why the negative binomial model fit well. We fit the second wave to a mostly flat second epidemic wave consiting of less than 5 cases at peak, which explains the poor fit of the model, as demonstrated in the corresponding plot below. It is unclear if growth rate has any practical interpretation, given the poor model fit that produced it. 
 
@@ -226,9 +251,22 @@ For the rest of the provinces and waves, the dispersion parameter for a fitted n
 
 New Brunswick has a very small wave in between the two epidemic waves we fit. We didn't fit to it because to the other two were much larger in magnitude. Also, the second wave in Nova Scotia is tiny, which could impact our model fit.  Prince Edward actually had four epidemic waves, the final three being very similar in size. Our estimates of epidemic growth rates are valid and useful insofar as we consider the waves we picked to the ones of interest.
 
+#### Newfoundland and Labrador
 ```{r, echo = FALSE, fig.height = 8, fig.width = 8, warning=FALSE, results = "asis"}
-province_plot(egfs, "NL")
-province_plot(egfs, "NB")
-province_plot(egfs, "NS")
-province_plot(egfs, "PEI")
+province_plot(egfs, "NL", annotate = TRUE)
+```
+
+#### New Brunswick
+```{r, echo = FALSE, fig.height = 8, fig.width = 8, warning=FALSE, results = "asis"}
+province_plot(egfs, "NB", annotate = TRUE)
+```
+
+#### Nova Scotia
+```{r, echo = FALSE, fig.height = 8, fig.width = 8, warning=FALSE, results = "asis"}
+province_plot(egfs, "NS", annotate = TRUE)
+```
+
+#### Prince Edward Island
+```{r, echo = FALSE, fig.height = 8, fig.width = 8, warning=FALSE, results = "asis"}
+province_plot(egfs, "PEI", annotate = TRUE)
 ```
