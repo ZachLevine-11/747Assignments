@@ -17,12 +17,19 @@ knitr::opts_chunk$set(fig.pos = "!H", out.extra = "")
 ## Executive Summary
 Here, we summarize some key features for the provinces below. 
 
-## Introduction
-It is important to highlight several choices made during this analysis that could influence the reliability of our results. First and foremost, epidemic initial growth rates were only fit for the ten Canadian provinces. This meant that we excluded the territories of Nunavut, the Yukon, and the Northwest Territories from our analysis. We excluded Nunavut because its time series only had one nonzero case report for the entire time period. Likewise, given the low total case reports for Yukon and the Northwest Territories (23 and 10, respectively), we were unable to get proper fits to the epidemic growth rates.
+## Key choices
 
-In addition, some days (such as 2020-03-25) provinces like Newfoundland and Labrador reported cases multiple times. This resulted in repeated observations with differing case reports for that day. To correct this, we added the two case counts together for those days, and removed the duplicated date from the time series for that province. Likewise we removed the report for New Brunswick on "2020-04-02", as it seemed to result from faulty case reporting on that day and appeared to be an outlier - sitting far away from the rest of the reports of the epidemic. Also, some cases reports were negative. While we speculated that these could be employed to correct the case count, we did not know their true function, and so all days with negative case reports were removed from all provinces. 
+### Provinces included
+It is important to highlight several choices made during this analysis that could influence the reliability of our results. First and foremost, epidemic initial growth rates were only fit for the ten Canadian provinces, excluding the territories of Nunavut, the Yukon, and the Northwest Territories. We excluded Nunavut because the province only reported one case over the entire observation period. Likewise, given the low total case reports for Yukon and the Northwest Territories (23 and 10, respectively), we were unable to get useful fits to the epidemic growth rates there too. 
 
-Data was given as cumulative case counts, for each day, for each province. We derived interval incidence by differencing that time series with a lag of one. In addition, irregular weekend reporting patterns were observed for British Columbia and Alberta. We defined a situation with faulty weekend reporting as weekend with zero cases reported on Saturday and Sunday, and nonzero case reports on the Friday before and Monday after. BC had 21 of these weekends alone. For these two provinces then, we removed all weekend dates from the time series, and added the reports for Saturday and Sunday to the following Monday if they were nonzero.
+#### Corrections to the data
+Data was given as cumulative case counts, for each day, for each province. We derived interval incidence by differencing that time series with a lag of one.
+
+Next, on some days (eg. 2020-03-25) provinces (eg. Newfoundland and Labrador) reported new COVID-19 cases multiple times. This resulted in repeated observations with differing case reports for that day. To correct this, we added the two case counts together for those days, and removed the duplicated date entirely. Likewise we removed the report for New Brunswick on April 4th, 2020, as it seemed too far an outlier to be realistic.
+
+While we speculated that negative cases, which were observed in multiple provinces, could have been reported to correct earlier totals, we had no guarantees to that end. This informed our decision to remove all days with negative case reports from the data.
+
+In addition, irregular weekend reporting patterns were observed for the provinces of British Columbia and Alberta (22 and 11, respectively). We defined a case of faulty weekend reporting as weekend with zero cases reported on Saturday and Sunday, and nonzero case reports on the days before and after the weekend. For these two provinces, we removed all weekend dates from the time series, and added the reports for Saturday and Sunday to the following Monday if they were nonzero.
 
 ```{r echo=FALSE, message= FALSE, warning=FALSE, dev="tikz", results="hide"}
 library(epigrowthfit)
@@ -125,17 +132,9 @@ egfs <- sapply(names(splitintervalCases)[!names(splitintervalCases) %in% ignore]
     theFirst <- egf_init(cases = provincetimeseries, date = dates, first = 3, last = 20, distr = "pois")
       theSecond <- egf_init(cases = provincetimeseries, date = dates, first = beginingwave2, peak = endingwave2, distr = "pois")
   }
-  else if (provinceName == "NT"){
-    theFirst <- egf_init(cases = provincetimeseries, date = dates, first = beginingwave1, last = endingwave1, distr = "pois")
-    theSecond <- egf_init(cases = provincetimeseries, date = dates, peak = 214, distr = "pois")
-  }
   else if (provinceName == "PEI"){
   theFirst <- egf_init(cases = provincetimeseries, date = dates, first = beginingwave1, last = endingwave1, distr = "pois")
   theSecond <- egf_init(date = dates, cases = provincetimeseries, peak = 174, distr = "pois")
-  }
-  else if (provinceName == "YT"){
-    theFirst <- egf_init(date = dates, cases = provincetimeseries, peak = 31, distr = "pois")
-    theSecond <- egf_init(date = dates, cases = provincetimeseries, peak = 214, distr = "pois")
   }
     ##Really just ON and AB
   else{
@@ -154,13 +153,12 @@ egfs <- data.frame(egfs)
 egfs <- t(egfs)
 ```
 
+## Results
+
+We illustrate the parameter estimates of interest below.
+
 ```{r, echo = FALSE, warning=FALSE, results = "asis"}
 ##Make the table.
-province_plot <- function(egf_df, province){
-  par(mfrow = c(2, 1))
-  plot(egf_df[[province, "first"]])
-  plot(egf_df[[province, "second"]], add = TRUE)
-}
 make_table <- function(egf_df, wave = "first"){
   data("covid_generation_interval")
   growthRates <- c()
@@ -185,66 +183,52 @@ Hmisc::latex(make_table(egfs, wave = "first"), title = "", rowname = "", file = 
 Hmisc::latex(make_table(egfs, wave = "second"), title = "", rowname = "", file = "")
 ```
 
-## Model fit
+Make sure to answer
+- Why are some fits better than others?
+- How do the results differ among provinces?
+- Why do you think they differ?
+- Are there policy implications of your results that PHAC should consider?
+- What are the most important take-home messages for PHAC?
 
-Ontario fit very well, because large numbers of cases were reported on regular intervals, with no faulty weekend case reports. Quebec fit for both waves wasn't be because for both waves there is a period of exponential growth but the peak of the wave isn't reached, then we stop growing exponentially and then start again briefly before the peak. I chose the fitting window when growth becomes sub exponetial to obtain better fits, but this affects the validity of our results. Fitting to British Columbia was difficult because there were three distinct waves of epidemic there. One epidemic ran dfrom March to April, one from June to September, and one from October to November. I chose the first and final wave to fit models to. British Columbia interval incidence grows subexponentially for a significant chunk of the time series. Thus, the initial epidemic growth rate isn't strongly representative of the initial phase of the second wave, because cases counts grew very slowly for a long time, and then shot up. Manitoba data displays the same trend but on a smaller scale. Saskatchewan has multiple mini waves before a big one starting late October, not just two waves. We chose the biggest two to be the ones to study, but this may not have been the best choice. At least three mini waves occur before what we denote as the first wave, and it may have been better to fit to them. There was only one real epidemic wave in Newfoundland and Labrador Fit the second wave to a mostly flat second epidemic wave consiting of less than 5 cases at peak, which explains the poor fit of the model, as demonstrated in the corresponding plot below. It is unclear if growth rate has any practical interpretation, given the poor model fit that produced it. New Brunswick has a very small wave in between the two epidemic waves we fit. We didn't fit to it because to the other two were much larger in magnitude. Also, the second wave in Nova Scotia is tiny, which could impact our model fit. Prince Edward actually had four epidemic waves, the final three being very similar in size. Our estimates of epidemic growth rates are valid and useful insofar as we consider the waves we picked to the ones of interest.
+#### Negative binomial models: Ontario, Quebec, Alberta, Saskatchewan, British Columbia, and Manitoba
 
-## Interpreting differences in results
+All six provinces were fit with a logistic model of expected cumulative incidence, and a negative binomial model for observed interval incidence. The negative binomial model fit well because the dispersion parameter k was small for both waves (10.217 for Ontario wave 1, for instance). This, switching to a Poission model was not necessary.
 
-How do the results differ between provinces, and why doyou think they differ?
+One would expect though for any reasonable model would have fit well to these data though. This is primarly because large numbers of cases were reported on regular intervals, with no faulty weekend case reports for Ontario and Quebec.
 
-Epidemics tended to grow the fastest in provinces with larger cities and bigger populations. We see this when looking at
+In Alberta and British Columbia, though weekend reporting was faulty, the corrected sums fit the trend of the reports around them, resulting in a good model fit. In addition, Saskatchewan actually saw multiple mini epidemic waves before a big wave starting late October, not just two waves. We chose the biggest two to be the ones to study, but this may not have been the best choice. At least three mini waves occur before what we denote as the first wave, and it may have been better to fit to them. 
+
+Selecting the best fitting window for British Columbia was difficult because there were three distinct waves of epidemic there. One epidemic ran dfrom March to April, one from June to September, and one from October to November. I chose the first and final wave to fit models to. British Columbia interval incidence grows subexponentially for a significant chunk of the time series. Thus, the initial epidemic growth rate isn't strongly representative of the initial phase of the second wave, because cases counts grew very slowly for a long time, and then shot up. However, after selecting the appropraiate fitting window, the negative binomial model fit well because the dispersion parameter k was small for both waves (W1 = 3.9931, W2 = 1.822).
 
 In the first wave, BC had smallest R0. The largest difference between BC and Ontario was that BC had a stronger public health intervention strategy to manage the pandemic. BC's success in managing the first wave of the epidemic the importance of control strategies in managaing the epidemic. However, the fact that cases picked up after the first wave also shows the importance of sicking consistently to those interventions.
 
-## Plots
-
-#### Ontario
 ```{r, echo = FALSE, fig.height = 8, fig.width = 8, warning=FALSE, results = "asis"}
+province_plot <- function(egf_df, province){
+  par(mfrow = c(2, 1))
+  plot(egf_df[[province, "first"]])
+  plot(egf_df[[province, "second"]], add = TRUE)
+}
 province_plot(egfs, "ON")
-```
-
-#### Alberta
-```{r, echo = FALSE, fig.height = 8, fig.width = 8, warning=FALSE, results = "asis"}
-province_plot(egfs, "AB")
-```
-
-#### Quebec
-```{r, echo = FALSE, fig.height = 8, fig.width = 8, warning=FALSE, results = "asis"}
 province_plot(egfs, "QC")
-```
-
-#### British Columbia
-```{r, echo = FALSE, fig.height = 8, fig.width = 8, warning=FALSE, results = "asis"}
-province_plot(egfs, "BC")
-```
-
-#### Saskatchewan
-```{r, echo = FALSE, fig.height = 8, fig.width = 8, warning=FALSE, results = "asis"}
+province_plot(egfs, "AB")
 province_plot(egfs, "SK")
-```
-
-#### Manitoba
-```{r, echo = FALSE, fig.height = 8, fig.width = 8, warning=FALSE, results = "asis"}
+province_plot(egfs, "BC")
 province_plot(egfs, "MB")
 ```
 
-#### Newfoundland and Labrador
+#### Poisson Models: Newfoundland and Labrador, Nova Scotia, New Brunsiwck, and Prince Edward Island
+
+NL negbin wave 1, poisson wave 2. NS pois wave 1 and wave 2. NB pois wave 1 and wave 2. pei pois wave 1 and wave 2
+
+There was only one real epidemic wave in Newfoundland and Labrador. However, the dispersion parameter k for the fitted model was 0.674, much below the threshold value as defined in the vignette, which explains why the negative binomial model fit well. We fit the second wave to a mostly flat second epidemic wave consiting of less than 5 cases at peak, which explains the poor fit of the model, as demonstrated in the corresponding plot below. It is unclear if growth rate has any practical interpretation, given the poor model fit that produced it. 
+
+For the rest of the provinces and waves, the dispersion parameter for a fitted negative binomial model exceeded the threshold value as defined in the vignette. Therefore, Poision models fit better to the data.
+
+New Brunswick has a very small wave in between the two epidemic waves we fit. We didn't fit to it because to the other two were much larger in magnitude. Also, the second wave in Nova Scotia is tiny, which could impact our model fit.  Prince Edward actually had four epidemic waves, the final three being very similar in size. Our estimates of epidemic growth rates are valid and useful insofar as we consider the waves we picked to the ones of interest.
+
 ```{r, echo = FALSE, fig.height = 8, fig.width = 8, warning=FALSE, results = "asis"}
 province_plot(egfs, "NL")
-```
-
-#### New Brunswick
-```{r, echo = FALSE, fig.height = 8, fig.width = 8, warning=FALSE, results = "asis"}
 province_plot(egfs, "NB")
-```
-
-#### Nova Scotia
-```{r, echo = FALSE, fig.height = 8, fig.width = 8, warning=FALSE, results = "asis"}
 province_plot(egfs, "NS")
-```
-
-#### Prince Edward Island
-```{r, echo = FALSE, fig.height = 8, fig.width = 8, warning=FALSE, results = "asis"}
 province_plot(egfs, "PEI")
 ```
