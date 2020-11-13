@@ -1,5 +1,5 @@
 ---
-title: "Zachary_Levine_Math747_A1.R"
+title: "Estimating COVID-19 Epidemic Growth Rates in Canada"
 author: "Zachary Levine"
 date: '2020-10-27'
 output: 
@@ -14,7 +14,15 @@ knitr::opts_chunk$set(echo = TRUE)
 knitr::opts_chunk$set(fig.pos = "!H", out.extra = "")
 ```
 
-## Importing libraries and loading data
+## Executive Summary
+Here, we summarize some key features for the provinces below. 
+
+## Introduction
+It is important to highlight several choices made during this analysis that could influence the reliability of our results. First and foremost, epidemic initial growth rates were only fit for the ten Canadian provinces. This meant that we excluded the territories of Nunavut, the Yukon, and the Northwest Territories from our analysis. We excluded Nunavut because its time series only had one nonzero case report for the entire time period. Likewise, given the low total case reports for Yukon and the Northwest Territories (23 and 10, respectively), we were unable to get proper fits to the epidemic growth rates.
+
+In addition, some days (such as 2020-03-25) provinces like Newfoundland and Labrador reported cases multiple times. This resulted in repeated observations with differing case reports for that day. To correct this, we added the two case counts together for those days, and removed the duplicated date from the time series for that province. Likewise we removed the report for New Brunswick on "2020-04-02", as it seemed to result from faulty case reporting on that day and appeared to be an outlier - sitting far away from the rest of the reports of the epidemic. Also, some cases reports were negative. While we speculated that these could be employed to correct the case count, we did not know their true function, and so all days with negative case reports were removed from all provinces. 
+
+Data was given as cumulative case counts, for each day, for each province. We derived interval incidence by differencing that time series with a lag of one. In addition, irregular weekend reporting patterns were observed for British Columbia and Alberta. We defined a situation with faulty weekend reporting as weekend with zero cases reported on Saturday and Sunday, and nonzero case reports on the Friday before and Monday after. BC had 21 of these weekends alone. For these two provinces then, we removed all weekend dates from the time series, and added the reports for Saturday and Sunday to the following Monday if they were nonzero.
 
 ```{r echo=FALSE, message= FALSE, warning=FALSE, dev="tikz", results="hide"}
 library(epigrowthfit)
@@ -26,30 +34,14 @@ library(chron)
 ##There should be no math in the executive summary. Explain clearly what you're talking about, but make sure the executive summary is accessible very broadly.
 covid.canada.filename <- "COVID19_Canada.csv"
 ignore <- c("NT", "NU", "YT")
-#This gives a data.frame of prevalence for all proviences and all dates.
-##Exclude Nunavut, since no reported cases.
 allcases <- read.csv(covid.canada.filename)[,c("Province", "Date", "confirmed_positive", "Note")]
-##Get rid of YT because the plot is nonsense.
-##Turn that into a list of each province's interval reported cases time series.
 ##Get rid of rows with duplicate dates, such as (NL-2020-03-25), by removing the duplicated date and adding its case reports to first report for that date.
 ##First grab the indices of the original dates one row above the repeated dates.
-##Can explain that there was one case in NU so there's nothing to discuss there.
 originalDateIndices <- (diff(anytime::anydate(allcases$Date)) == 0)[c(2:length(diff(anytime::anydate(allcases$Date)) == 0), FALSE)]
 ##Add the second case report to the first.
 allcases[originalDateIndices, "confirmed_positive"] <- allcases[originalDateIndices, "confirmed_positive"] + allcases[diff(anytime::anydate(allcases$Date)) == 0, "confirmed_positive"]
 ##Get rid of the duplicate dates.
 allcases <- allcases[!diff(anytime::anydate(allcases$Date)) == 0,]
-##For each province, holds the index for the start of the waves
-##Quebec fit for both waves won't be great because for both waves there is a period of exponential growth but the peak of the wave isn't reached, then we stop growing exponentially and then start again briefly before the peak. End the fitting window when growth becomes sub exponetial, regardless of if peak has occured yet.
-##BC grows slowly in the second wave for a bit until growth becomes exponential. Thus, the initial growth rate isn't strongly representative of the initial phase of the second wave. MB data displays the same trend but on a smaller scale.
-##SK has multiple mini waves before a big one starting late October, not just two waves. We chose the biggest two to be the ones to study, but this may not have been the best choice. At least three mini waves occur before what we denote as the first wave. May have been better to fit to them.
-##Only one real epidemic wave in NL. Fit the secon wave to a mostly flat second epidemic wave consiting of less than 5 cases at peak. Unclear if this makes any sense.
-##NB has a very small wave in between the two epidemic waves we fit. Didn't fit to it because to the other two were much larger in magnitude.
-##Second wave in NS is tiny.
-##PEI actually has four epidemic waves, the final three being very similar in size.
-##YT has very small peaks (1), but if we consider that as a wave than there are at least of them.
-##Fitting were determined for the most part by visual inspection.
-#Only one wave in NL
 wave1beginings <- c("ON" = 11, "AB" = 2, "QC" = 5, "BC" = 1, "SK" = 5, "MB" = 1, "NL" = 1, "NB" = 3, "NS" = 1, "PEI" = 6, "YT" = 20, "NT" = 1, "NU" = NA)
 wave1endings <- c("ON" = 77 , "AB" = 38, "QC" = 29, "BC" = 9, "SK" = 16, "MB" = 16, "NL" = 7, "NB" = 23, "NS" = 34, "PEI" = 15, "YT" = 29, "NT" = 23, "NU" = NA)
 wave2beginings <- list("ON" = 188, "AB" = 133, "QC" = 185, "BC" = 151, "SK" = 194, "MB" = 195, "NL" = 221, "NB" = 198, "NS" = 213, "PEI" = 200, "YT" = 201, "NT" = 200, "NU" = NA)
@@ -132,7 +124,6 @@ egfs <- sapply(names(splitintervalCases)[!names(splitintervalCases) %in% ignore]
   else if (provinceName == "NB"){
     theFirst <- egf_init(cases = provincetimeseries, date = dates, first = 3, last = 20, distr = "pois")
       theSecond <- egf_init(cases = provincetimeseries, date = dates, first = beginingwave2, peak = endingwave2, distr = "pois")
-
   }
   else if (provinceName == "NT"){
     theFirst <- egf_init(cases = provincetimeseries, date = dates, first = beginingwave1, last = endingwave1, distr = "pois")
@@ -163,20 +154,12 @@ egfs <- data.frame(egfs)
 egfs <- t(egfs)
 ```
 
-Tables and figures
 ```{r, echo = FALSE, warning=FALSE, results = "asis"}
-##Maybe don't do the territories.
 ##Make the table.
-
-make_plots <- function(egf_df){
-  i <- 1
-  provincesList <- unique(allcases$Province)[!unique(allcases$Province) %in% ignore]
-  while (i <= nrow(egf_df)){
-    par(mfrow = c(2, 1))
-    plot(egf_df[[i, "first"]])
-    plot(egf_df[[i, "second"]], add = TRUE)
-    i <- i + 1
-  }
+province_plot <- function(egf_df, province){
+  par(mfrow = c(2, 1))
+  plot(egf_df[[province, "first"]])
+  plot(egf_df[[province, "second"]], add = TRUE)
 }
 make_table <- function(egf_df, wave = "first"){
   data("covid_generation_interval")
@@ -197,16 +180,71 @@ make_table <- function(egf_df, wave = "first"){
                          "Doubling Time"= doublingTimes ,
                          "Reproduction Number" = R0s))
 }
-```
-
-Tables.
-```{r, echo = FALSE, warning=FALSE, results = "asis"}
 options(omitlatexcom = TRUE)
 Hmisc::latex(make_table(egfs, wave = "first"), title = "", rowname = "", file = "")
 Hmisc::latex(make_table(egfs, wave = "second"), title = "", rowname = "", file = "")
 ```
 
-Plots.
-```{r, echo = FALSE, warning=FALSE, results = "asis"}
-make_plots(egfs)
+## Model fit
+
+Ontario fit very well, because large numbers of cases were reported on regular intervals, with no faulty weekend case reports. Quebec fit for both waves wasn't be because for both waves there is a period of exponential growth but the peak of the wave isn't reached, then we stop growing exponentially and then start again briefly before the peak. I chose the fitting window when growth becomes sub exponetial to obtain better fits, but this affects the validity of our results. Fitting to British Columbia was difficult because there were three distinct waves of epidemic there. One epidemic ran dfrom March to April, one from June to September, and one from October to November. I chose the first and final wave to fit models to. British Columbia interval incidence grows subexponentially for a significant chunk of the time series. Thus, the initial epidemic growth rate isn't strongly representative of the initial phase of the second wave, because cases counts grew very slowly for a long time, and then shot up. Manitoba data displays the same trend but on a smaller scale. Saskatchewan has multiple mini waves before a big one starting late October, not just two waves. We chose the biggest two to be the ones to study, but this may not have been the best choice. At least three mini waves occur before what we denote as the first wave, and it may have been better to fit to them. There was only one real epidemic wave in Newfoundland and Labrador Fit the second wave to a mostly flat second epidemic wave consiting of less than 5 cases at peak, which explains the poor fit of the model, as demonstrated in the corresponding plot below. It is unclear if growth rate has any practical interpretation, given the poor model fit that produced it. New Brunswick has a very small wave in between the two epidemic waves we fit. We didn't fit to it because to the other two were much larger in magnitude. Also, the second wave in Nova Scotia is tiny, which could impact our model fit. Prince Edward actually had four epidemic waves, the final three being very similar in size. Our estimates of epidemic growth rates are valid and useful insofar as we consider the waves we picked to the ones of interest.
+
+## Interpreting differences in results
+
+How do the results differ between provinces, and why doyou think they differ?
+
+Epidemics tended to grow the fastest in provinces with larger cities and bigger populations. We see this when looking at
+
+In the first wave, BC had smallest R0. The largest difference between BC and Ontario was that BC had a stronger public health intervention strategy to manage the pandemic. BC's success in managing the first wave of the epidemic the importance of control strategies in managaing the epidemic. However, the fact that cases picked up after the first wave also shows the importance of sicking consistently to those interventions.
+
+## Plots
+
+#### Ontario
+```{r, echo = FALSE, fig.height = 8, fig.width = 8, warning=FALSE, results = "asis"}
+province_plot(egfs, "ON")
+```
+
+#### Alberta
+```{r, echo = FALSE, fig.height = 8, fig.width = 8, warning=FALSE, results = "asis"}
+province_plot(egfs, "AB")
+```
+
+#### Quebec
+```{r, echo = FALSE, fig.height = 8, fig.width = 8, warning=FALSE, results = "asis"}
+province_plot(egfs, "QC")
+```
+
+#### British Columbia
+```{r, echo = FALSE, fig.height = 8, fig.width = 8, warning=FALSE, results = "asis"}
+province_plot(egfs, "BC")
+```
+
+#### Saskatchewan
+```{r, echo = FALSE, fig.height = 8, fig.width = 8, warning=FALSE, results = "asis"}
+province_plot(egfs, "SK")
+```
+
+#### Manitoba
+```{r, echo = FALSE, fig.height = 8, fig.width = 8, warning=FALSE, results = "asis"}
+province_plot(egfs, "MB")
+```
+
+#### Newfoundland and Labrador
+```{r, echo = FALSE, fig.height = 8, fig.width = 8, warning=FALSE, results = "asis"}
+province_plot(egfs, "NL")
+```
+
+#### New Brunswick
+```{r, echo = FALSE, fig.height = 8, fig.width = 8, warning=FALSE, results = "asis"}
+province_plot(egfs, "NB")
+```
+
+#### Nova Scotia
+```{r, echo = FALSE, fig.height = 8, fig.width = 8, warning=FALSE, results = "asis"}
+province_plot(egfs, "NS")
+```
+
+#### Prince Edward Island
+```{r, echo = FALSE, fig.height = 8, fig.width = 8, warning=FALSE, results = "asis"}
+province_plot(egfs, "PEI")
 ```
