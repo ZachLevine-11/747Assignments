@@ -1,0 +1,30 @@
+Symbol,Value,Parameter
+beta0,0.950633947,Baseline (non-intervention) transmission across categories
+Ca,0.666666667,relative asymptomatic transmission (or contact)
+Cp,1,relative presymptomatic transmission (or contact)
+Cm,1,relative mildly symptomatic transmission (or contact)
+Cs,1,relative severely symptomatic transmission (or contact)
+alpha,0.333333333,Fraction of cases asymptomatic
+sigma,0.913126599,1/time in exposed class
+gamma_a,0.678322616,1/time for asymptomatic recovery
+gamma_m,0.678322616,1/time for mildly symptomatic recovery
+gamma_s,0.83011509,1/time for severely symptomatic transition to hospital/death
+gamma_p,2,1/time in pre-symptomatic class
+rho,0.1,1/time in hospital (acute care)
+delta,0,Fraction of acute-care cases that are fatal
+mu,0.975,Fraction of symptomatic cases that are mild
+N,1.46E+07,Population size
+E0,5,Initial number exposed
+nonhosp_mort,0,probability of mortality without hospitalization
+iso_m,0.2,Relative self-isolation/distancing of mild cases
+iso_s,0.2,Relative self-isolation/distancing of severe cases
+phi1,0.84,Fraction of hospital cases to acute care
+phi2,0.5,Fraction of ICU cases dying
+psi1,0.05,Rate of ICU back to acute care
+psi2,0.125,Rate of ICU to death
+psi3,0.2,Rate of post-ICU to discharge
+c_prop,0.1,fraction of incidence reported as positive tests
+c_delay_mean,8,average delay between incidence and test report
+c_delay_cv,0.25,coefficient of variation of testing delay
+proc_disp,0,dispersion parameter for process error (0=demog stoch only)
+zeta,0,phenomenological heterogeneity parameter
