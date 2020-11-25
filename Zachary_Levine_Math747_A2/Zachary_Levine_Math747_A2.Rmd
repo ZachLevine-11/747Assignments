@@ -35,7 +35,7 @@ library("anytime")
 thedata <- data.frame(sim[,c("date")],rep("report", nrow(sim)), sim[,"report"])
 colnames(thedata) <- c("date", "var", "value")
 ###Set three time varying paramters for beta0
-optpars <- list(params = list(beta0 = 0.1, Ca = 0.1), beta0 = c(0.977, 0.75, 0.71))
+optpars <- list(params = list(beta0 = 0.5, Ca = 0.1), beta0 = c(0.977, 0.75, 0.71))
 res <- calibrate(start_date = anytime::anydate("2020-01-01"),
           data = thedata,
           base_params = params,
