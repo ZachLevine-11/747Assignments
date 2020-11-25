@@ -13,18 +13,33 @@ fontsize: 12pt
 
 ```
 
-
+Part one: simulate
 ```{r}
 library("McMasterPandemic")
 params <- read_params("params.csv")
+params <- update(params,c(proc_disp = 0.5, obs_disp = 500))
 time_pars <- data.frame(Date=c("2020-01-01","2020-03-10","2020-05-01"),
                        Symbol=c("beta0", "beta0", "beta0"),
                        Relative_value=c(0.9777, 0.75, 0.71),
                        stringsAsFactors=FALSE)
-
-
 sim <- run_sim(params, start_date = "2020-01-01" ,end_date = "2020-09-01",
-               params_timevar = time_pars)
+               params_timevar = time_pars, stoch = c(obs = TRUE, proc = FALSE))
 dropstates <- c("cumRep", "S", "E", "I", "X","D", "H", "foi", "R", "incidence", "hosp", "ICU", "death")
 plot(sim, drop_states = dropstates)
+```
+
+
+Part two: calibrate
+```{r}
+library("anytime")
+thedata <- data.frame(sim[,c("date")],rep("report", nrow(sim)), sim[,"report"])
+colnames(thedata) <- c("date", "var", "value")
+##Use the params we had above.
+optpars <- list(params = c(beta0 = 0.1))
+res <- calibrate(start_date = anytime::anydate("2020-01-01"),
+          data = thedata, base_params = params,
+          time_args = list(break_dates = NULL),
+          opt_pars = optpars,
+          end_date =  anytime::anydate("2020-09-01")
+          )
 ```
