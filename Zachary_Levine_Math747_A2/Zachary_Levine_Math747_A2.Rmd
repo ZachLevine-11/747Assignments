@@ -34,10 +34,11 @@ Part two: calibrate
 library("anytime")
 thedata <- data.frame(sim[,c("date")],rep("report", nrow(sim)), sim[,"report"])
 colnames(thedata) <- c("date", "var", "value")
-##Use the params we had above.
-optpars <- list(params = c(beta0 = 0.1))
+###Set three time varying paramters for beta0
+optpars <- list(params = list(beta0 = 0.1, Ca = 0.1), beta0 = c(0.977, 0.75, 0.71))
 res <- calibrate(start_date = anytime::anydate("2020-01-01"),
-          data = thedata, base_params = params,
+          data = thedata,
+          base_params = params,
           time_args = list(break_dates = NULL),
           opt_pars = optpars,
           end_date =  anytime::anydate("2020-09-01")
