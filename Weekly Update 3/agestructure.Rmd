@@ -30,18 +30,11 @@ for (ageGroup in ageClasses){
   wave1egf <- egf(egf_init(date = freq$Date, cases = freq$n, peak = smooth_cases(date = freq$Date, cases = freq$n, log = FALSE, spar = 0.4)$peaks[2]))
   wave2egf <- egf(egf_init(date = freq$Date, cases = freq$n, peak = smooth_cases(date = freq$Date, cases = freq$n, log = FALSE, spar = 0.4)$peaks[length(smooth_cases(date = freq$Date, cases = freq$n, log = FALSE, spar = 0.4)$peaks)]))
   doublingtimes <- c(doublingtimes, c("first" = compute_doubling_time(wave1egf), "second" = compute_doubling_time(wave2egf)))
+  print(ageGroup)
+  print(c("first" = compute_doubling_time(wave1egf), "second" = compute_doubling_time(wave2egf)))
     egfs <- c(egfs, list("first" = wave1egf, "second" = wave2egf))
+    plot(wave1egf)
+    plot(wave2egf)
 }
 doublingtimes <- data.frame(doublingtimes)
-labs <- c()
-for (i in 1:length(ageClasses)){
-  ##Even entries correspond to the second wave.
-  if (i %% 2  == 0){
-    labs <- c(labs, paste(ageClasses[i], "second", sep = "-"))
-  }
-  else{
-    labs <- c(labs, paste(ageClasses[i], "first", sep = "-"))
-  }
-}
-doublingtimes$type <- labs
 ```
