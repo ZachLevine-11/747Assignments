@@ -9,10 +9,22 @@ output: pdf_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## Introduction
 
-Ideas
-
-```{r cars}
-summary(cars)
+```{r}
+library(ggplot2)
+library(dplyr)
+library(lubridate)
+library(anytime)
+library(epigrowthfit)
+df <- read.csv("COVID19_cases.csv")
+freq <- df %>%
+  group_by(Date) %>%
+  summarize(n=n())
+freq$Date <- anytime::anydate(freq$Date )
+init1 <- egf_init(date = freq$Date, cases = freq$n, last = anytime::anydate("2020-05-01"))
+fit1 <- egf(init1)
+plot(fit1)
+init2 <- egf_init(date = freq$Date, cases = freq$n, first = anytime::anydate("2020-08-15"))
+fit2 <- egf(init2)
+plot(fit2)
 ```
