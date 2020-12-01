@@ -1,0 +1,124 @@
+\documentclass{article}\usepackage[]{graphicx}\usepackage[]{color}
+% maxwidth is the original width if it is less than linewidth
+% otherwise use linewidth (to make sure the graphics do not exceed the margin)
+\makeatletter
+\def\maxwidth{ %
+  \ifdim\Gin@nat@width>\linewidth
+    \linewidth
+  \else
+    \Gin@nat@width
+  \fi
+}
+\makeatother
+
+\definecolor{fgcolor}{rgb}{0.345, 0.345, 0.345}
+\newcommand{\hlnum}[1]{\textcolor[rgb]{0.686,0.059,0.569}{#1}}%
+\newcommand{\hlstr}[1]{\textcolor[rgb]{0.192,0.494,0.8}{#1}}%
+\newcommand{\hlcom}[1]{\textcolor[rgb]{0.678,0.584,0.686}{\textit{#1}}}%
+\newcommand{\hlopt}[1]{\textcolor[rgb]{0,0,0}{#1}}%
+\newcommand{\hlstd}[1]{\textcolor[rgb]{0.345,0.345,0.345}{#1}}%
+\newcommand{\hlkwa}[1]{\textcolor[rgb]{0.161,0.373,0.58}{\textbf{#1}}}%
+\newcommand{\hlkwb}[1]{\textcolor[rgb]{0.69,0.353,0.396}{#1}}%
+\newcommand{\hlkwc}[1]{\textcolor[rgb]{0.333,0.667,0.333}{#1}}%
+\newcommand{\hlkwd}[1]{\textcolor[rgb]{0.737,0.353,0.396}{\textbf{#1}}}%
+\let\hlipl\hlkwb
+
+\usepackage{framed}
+\makeatletter
+\newenvironment{kframe}{%
+ \def\at@end@of@kframe{}%
+ \ifinner\ifhmode%
+  \def\at@end@of@kframe{\end{minipage}}%
+  \begin{minipage}{\columnwidth}%
+ \fi\fi%
+ \def\FrameCommand##1{\hskip\@totalleftmargin \hskip-\fboxsep
+ \colorbox{shadecolor}{##1}\hskip-\fboxsep
+     % There is no \\@totalrightmargin, so:
+     \hskip-\linewidth \hskip-\@totalleftmargin \hskip\columnwidth}%
+ \MakeFramed {\advance\hsize-\width
+   \@totalleftmargin\z@ \linewidth\hsize
+   \@setminipage}}%
+ {\par\unskip\endMakeFramed%
+ \at@end@of@kframe}
+\makeatother
+
+\definecolor{shadecolor}{rgb}{.97, .97, .97}
+\definecolor{messagecolor}{rgb}{0, 0, 0}
+\definecolor{warningcolor}{rgb}{1, 0, 1}
+\definecolor{errorcolor}{rgb}{1, 0, 0}
+\newenvironment{knitrout}{}{} % an empty environment to be redefined in TeX
+
+\usepackage{alltt}
+\usepackage{color}
+\usepackage[T1]{fontenc}
+\input{4mbapreamble.tex}
+\IfFileExists{upquote.sty}{\usepackage{upquote}}{}
+\begin{document}
+
+\title{Mathematics 747 Assignment 2}
+\author{Zachary Levine}
+\date{\today}
+\maketitle
+
+The following assignment was completed using the \texttt{McMasterPandemic} $\Rlogo$ package.
+
+\section{McMasterPandemic shiny Improvements}
+I implemented the following bug fixes for the Shiny:
+\begin{itemize}
+\item Fixed a bug (at Luka and Vlad's sugegstion) where setting the population size (and several other parameters) explicitly by typing into the box would force the slider and the text input box out of sync.
+\item Fixed a bug (at Aigerim's suggestion) where time varying transmission rates could not be implimented after noise had been added to the graph.
+\end{itemize}
+
+Parts two and three were already complete.
+
+\section{Part four: Simulating an epidemic}
+ I spent many hours trying to find parameter settings to make the first wave of COVID-19 in Ontario. I first spent a very long time trying to do so without implementing time-varying transmission rates, and could not come up with a simulation that was even remotely close to the first wave of reported cases in Ontario. Eventually, I had to implement two time-varying changes for \texttt{beta0}, the baseline transmission rate across categories. I tried to find a match between the \texttt{report} column of the simulation and daily reported case counts of COVID-19 in Ontario. Below, please find my result.
+ 
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}
+\includegraphics[width=\maxwidth]{figure/init-1} 
+
+\end{knitrout}
+
+
+\section{Part five: parameter fitting}
+Now, assuming that my simulation of the first wave in Ontario is correct, we will use the fitting machinery in \texttt{McMasterPandemic}, namely the method \texttt{calibrate} to estimate the model parameter for \texttt{beta0} that we started with. Then, we will plot the result.
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}
+\includegraphics[width=\maxwidth]{figure/main-1} 
+
+\end{knitrout}
+
+Visual inspection of the plot confirms that we have a decent model fit. If we compare the estimated parameters with the known ones that we used to generate the simulation, we see a somewhat reasonable match as well.
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}
+\begin{tabular}{r|r|r}
+\hline
+beta0 initial values & beta0 first time change & beta0 second time change\\
+\hline
+0.929400 & 0.7671000 & 0.7261000\\
+\hline
+0.892804 & 0.6256154 & 0.8225528\\
+\hline
+\end{tabular}
+
+\begin{kframe}\begin{verbatim}
+## $params
+## $params$beta0
+## [1] 0.892804
+## 
+## 
+## $rel_beta0
+## [1] 0.6256154 0.8225528
+\end{verbatim}
+\end{kframe}
+\end{knitrout}
+
+We hypothesize that including both process error and observation error does worsened our parameter estimates significantly. However, we conclude our section with some feedback on the \texttt{McMasterPandemic} package.
+
+\section{Part six: Feedback on \texttt{McMasterPandemic}}
+Overall, I really enjoyed working with the \texttt{McMasterPandemic} package.
+
+\end{document}

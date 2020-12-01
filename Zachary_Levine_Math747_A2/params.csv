@@ -1,5 +1,5 @@
 Symbol,Value,Parameter
-beta0,0.950633947,Baseline (non-intervention) transmission across categories
+beta0,0.9294,Baseline (non-intervention) transmission across categories
 Ca,0.666666667,relative asymptomatic transmission (or contact)
 Cp,1,relative presymptomatic transmission (or contact)
 Cm,1,relative mildly symptomatic transmission (or contact)

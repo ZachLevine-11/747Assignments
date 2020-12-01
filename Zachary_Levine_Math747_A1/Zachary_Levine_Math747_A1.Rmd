@@ -6,6 +6,7 @@ output:
   pdf_document:
       includes:
         in_header: 4mbapreamble.tex
+fontsize: 12pt
 ---
 
 ```{r setup, include=FALSE}
@@ -13,24 +14,18 @@ output:
 
 ## Executive Summary
 
-In the following analysis, we fit epidemic models to the the ten Canadian provinces, excluding the territories of Nunavut, the Yukon, and the Northwest Territories, for both waves of COVID-19. Our estimates are most reliable in Ontario, Alberta, Quebec, Saskatchewan, British Columbia and Manitoba. Due to their low case counts, maritime provinces were harder to analyze precisely. During both waves of COVID-19, the maritime provinces for both waves consistently had the highest transmission, as assessed in our analysis. We attribute this to the extremely low case counts for these provinces, which made it difficult to fit our models. British Columbia had generally the least COVID-19 transmission, and Manitoba and Saskatchewan had the highest transmission. Why this occurred is largely unknown, though we can elucidate that in the prairies, climate specific factors may have played a role in increasing transmission. Ontario and Alberta were generally in the middle relative to other provinces. We hypothesized that this was due to the large urban center in Ontario and Alberta, which increased transmission. However, the provinces' adherence to good public health intervention measures put them below Manitoba and Saskatchewan in terms of transmission. We conclude by stressing the importance of keeping public health interventions, such as lockdowns, in place during a pandemic in order to curb the spread.
+In the following analysis, we fit epidemic models to the the ten Canadian provinces, excluding the territories of Nunavut, the Yukon, and the Northwest Territories, for both waves of COVID-19. Our estimates are most reliable in Ontario, Alberta, Quebec, Saskatchewan, British Columbia and Manitoba. During both waves of COVID-19, we found that the maritime provinces for both waves consistently had the highest transmission. We attribute this to the extremely low case counts for these provinces, which made it difficult to fit our models, which influences the reliability of our results. British Columbia had generally the least COVID-19 transmission, and Manitoba and Saskatchewan were on the higher end. Why this occurred is largely unknown, though we can elucidate that in the prairies, climate specific factors may have played a role in increasing transmission. Ontario and Alberta were generally in the middle relative to the transmission of other provinces. We hypothesized that this was due to the large urban centers in Ontario and Alberta, which increased transmission. However, the provinces' adherence to good public health intervention measures put them below Manitoba and Saskatchewan in terms of transmission. We conclude by stressing the importance of keeping public health interventions, such as lockdowns, in place during a pandemic in order to curb the spread.
 
 ## Key choices
 
 ### Provinces included
 It is important to highlight several choices made during this analysis that could influence the reliability of our results. First and foremost, epidemic initial growth rates were only fit for the ten Canadian provinces, excluding the territories of Nunavut, the Yukon, and the Northwest Territories. We excluded Nunavut because the province only reported one case over the entire observation period. Likewise, given the low total case reports for Yukon and the Northwest Territories (23 and 10, respectively), we were unable to get useful fits to the epidemic growth rates there too. 
 
-##Models of expected cumulative incidence
-To obtain better fits to the initial growth phase of both epidemic waves for each province, we chose to fit our all of models with a logistic model for expected cumulative incidence. The other two candidates for expected cumulative incidence were the exponential and Richards models. Since under the exponential model, expected cumulative incidence grows exponentially with no upper bound, the slowing of the epidemic from using up susceptible individuals is not captured by this model. We considered fitting with Richards models, however using the logistic models curve resulted in better fits, so it ended up being our ultimate choice.
+### Models of expected cumulative incidence
+To obtain better fits to the initial growth phase of both epidemic waves, we chose to fit our all of models with a logistic model for expected cumulative incidence. The other two candidate models for expected cumulative incidence were the exponential and Richards models. Since under the exponential model, expected cumulative incidence grows exponentially with no upper bound, the slowing of the epidemic from using up susceptible individuals is not captured by this model. Therefore, we did not use exponential models at all. We considered fitting with Richards models, however using the logistic models curve resulted in better fits, so it ended up being our ultimate choice.
 
 #### Corrections to the data
-Data was given as cumulative case counts, for each day, for each province. We derived interval incidence by differencing that time series with a lag of one.
-
-Next, on some days (eg. 2020-03-25) provinces (eg. Newfoundland and Labrador) reported new COVID-19 cases multiple times. This resulted in repeated observations with differing case reports for that day. To correct this, we added the two case counts together for those days, and removed the duplicated date entirely. Likewise we removed the report for New Brunswick on April 4th, 2020, as it seemed too far an outlier to be realistic.
-
-While we speculated that negative cases, which were observed in multiple provinces, could have been reported to correct earlier totals, we had no guarantees to that end. This informed our decision to remove all days with negative case reports from the data.
-
-In addition, irregular weekend reporting patterns were observed for the provinces of British Columbia and Alberta (22 and 11, respectively). We defined a case of faulty weekend reporting as weekend with zero cases reported on Saturday and Sunday, and nonzero case reports on the days before and after the weekend. For these two provinces, we removed all weekend dates from the time series, and added the reports for Saturday and Sunday to the following Monday if they were nonzero.
+Data was given as cumulative case counts, for each day, for each province. We derived interval incidence by differencing that time series with a lag of one. Next, on some days (eg. 2020-03-25) some provinces (eg. Newfoundland and Labrador) reported new COVID-19 cases multiple times. This resulted in repeated observations with differing case reports for that day. To correct this, we added the two case counts together for those days, and removed the duplicated date entirely. Likewise we removed the report for New Brunswick on April 4th, 2020, as it seemed too far an outlier to be realistic. While we speculated that negative cases, which were observed in multiple provinces, could have been reported to correct earlier totals, we had no guarantees to that end. This informed our decision to remove all days with negative case reports from the data. In addition, irregular weekend reporting patterns were observed for the provinces of British Columbia and Alberta (22 and 11, respectively). We defined a case of faulty weekend reporting as weekend with zero cases reported on Saturday and Sunday, and nonzero case reports on the days before and after the weekend. For these two provinces, we removed all weekend dates from the time series, and added the reports for Saturday and Sunday to the following Monday, if they were nonzero.
 
 ```{r echo=FALSE, message= FALSE, warning=FALSE, dev="tikz", results="hide"}
 library(epigrowthfit)
@@ -193,29 +188,29 @@ kable(make_table(egfs, wave = "second"))
 
 #### How do the results differ among provinces, and why?
 
-British Columbia had the smallest $\R_0$ of 1.164 in the first wave of the pandemic, and the second smallest $\R_0$ of 1.09 during the second wave (second only to Alberta), despite the province containing some of Canada's biggest and most densely populated urban centers, where one would expect transmission to be higher. In the first wave, BC also  longest doubling time of almost eleven days. The largest difference between BC and other provinces was the strength and effectiveness of the public health intervention strategy put in place by government officials. These policies and the adherence by British Columbians was largely responsible for BC's success in managing the first wave of the pandemic. If we take another densely populated province, Ontario as our prototypical example, one can see that while the two provinces implemented a province-wide state of emergency only one day apart (Ontario: March 17th, 2020, BC: March 18th), British Columbia had far fewer deaths in long term care homes because they managed those facilities more effectively. Indeed, $\R_0$ in Ontario for the first wave was 1.455, much higher than British Columbia. However, the most important takeaway from this for public health officials is not that British Columbia did a good job in managing the pandemic at first. The message is that consistency of public health care interventions matters too. Indeed, COVID-19 cases in British Columbia picked up after that first wave, when BC relaxed their lockdown procedure. Looking at the graph, we can see that the begining of the second wave hit British Columbia just about at the end of May. It is no coincide that the government of British Columbia ended their lockdown on May 19th, 2020. Most other provinces, such as Ontario, follow a similar pattern - control strategies work, but case counts rise when we relax them. Implementing good control measures for a pandemic is not enough - we need to stick by them. Of course, there are economic and other trade-offs when implementing a province-wide lockdown. Thus, a weighted decision is still important in deciding when or if to extend a lockdown.
+British Columbia had the smallest $\R_0$ of 1.164 in the first wave of the pandemic, and the second smallest $\R_0$ of 1.09 during the second wave (second only to Alberta), despite the province containing some of Canada's biggest and most densely populated urban centers, where one would expect transmission to be higher. In the first wave, BC also had the longest doubling time at $~11$ days. The largest difference between BC and other provinces was the strength and effectiveness of the public health intervention strategy put in place by government officials. These policies and the adherence by British Columbians was largely responsible for BC's success in managing the first wave of the pandemic. If we take to study another densely populated province, Ontario, we can see that while the two provinces implemented a province-wide state of emergency only one day apart (Ontario: March 17th, 2020, BC: March 18th), $\R_0$ in Ontario for the first wave was 1.455, much higher than British Columbia.
+
+However, the most important takeaway from this for public health officials is not that British Columbia did a good job in managing the pandemic at first. Our argument is that the consistency over time of public health care interventions matters too. Indeed, COVID-19 cases in British Columbia picked up after that first wave, when BC relaxed their lockdown procedure. Looking at the graph, we can see that the begining of the second wave hit British Columbia just about at the end of May. It is no coincide that the government of British Columbia ended their lockdown on May 19th, 2020, which coincides directly with the start of the second wave when we consider the incubation period of COVID-19 from 2-14 days. Excluding the maritime provinces, other provinces that implimented lockdowns like Ontario follow a similar pattern - control strategies work, but case counts rise when public health officials relax them. From this we can see that implementing effective control measures for a pandemic is not enough to manage a pandemic - we need to stick by these measures. Of course, there are economic and other trade-offs when implementing a province-wide lockdown. Thus, a weighted decision is still important in deciding when or if to extend a lockdown.
 
 Interestingly the maritime provinces for both waves consistently had the highest $\R_0$, shortest doubling times, and biggest exponential growth rates. We attribute this to the extremely low case counts for these provinces, which influenced model fit and made it difficult to estimate these properties exactly.
 
-Between the non-maritime provinces, in terms of  $\R_0 > 1$, we observe the following order of increasing $\R_0$ (or transmission) for the first epidemic. $BC < AB < ON < MB < QC< SK$. The order remains for the initial epidemic growth rate, and is inverted for ($<$ = $>$) for doubling time. We can hypothesize that this relationship occured because BC did a good job, as discussed above, of employing and adhering to public health interventions to curb the pandemic. Other provinces near the bottom of the inequality, Alberta, Ontario and Manitoba, also employed strong public health interventions to curb the pandemic.
+Between the non-maritime provinces, in terms of  $\R_0$, we observe the following order of increasing $\R_0$ (or transmission) for the first epidemic. $BC < AB < ON < MB < QC< SK$. The order remains for initial epidemic growth rates, and is inverted for ($<$ = $>$) for doubling time. We can hypothesize that this relationship occured because BC did a good job (during this wave), as discussed above, of employing and adhering to public health interventions to curb the pandemic. Other provinces near the bottom of the inequality, Alberta, Ontario and Manitoba, also employed strong public health interventions to curb the pandemic.
 
-For wave 2, the increasing order of $\R_0$ (or transmission) is as follows: $AB< BC< ON< QC< SK < MB$. The order remains for the initial epidemic growth rate (except that $MB < QC < SK$), and is inverted for doubling time, with the exception of SK and MB, which change places (doubling time of SK is still less than doubling time of Maintoba).
+For wave 2, the increasing order of $\R_0$ (or transmission) is as follows: $AB< BC< ON< QC< SK < MB$. The order remains for the initial epidemic growth rate (except that $MB < QC < SK$), and is inverted for doubling time, with the exception of SK and MB, which change places (doubling time of SK is still less than doubling time of Maintoba). Why are Manitoba and Saskatchewan near the top of both inequalities? This remains an open question in our analysis. One possible explanation is that these increases are due to climate-specific factors of the prairies. If COVID-19 transmission is climate specific, this could explain why transmission is much worse there.
 
-Why are Manitoba and Saskatchewan near the top of both inequalities? This remains an open question in our analysis. One possible explanation is that these increases are due to climate-specific factors of the prairies.
-
-It is interesting to note that provinces had $\R_0 > 1$, for both waves indicating a locally asymptotically stable endemic equilibrium, as per the Theorem by van den Driessche and Watmough, as discussed on slide 114 of Lecture 3 for Math 747.
+It is interesting to note that all provinces had $\R_0 > 1$ for both waves. This indicates a locally asymptotically stable endemic equilibrium, as per the Theorem by van den Driessche and Watmough, as discussed on slide 114 of Lecture 3 for Math 747.
 
 #### Negative binomial models: Ontario, Quebec, Alberta, Saskatchewan, British Columbia, and Manitoba
 
-All six provinces were fit with a logistic model of expected cumulative incidence, and a negative binomial model for observed interval incidence. The negative binomial model fit well because the dispersion parameter k was small for both waves (10.217 for Ontario wave 1, for instance). This, switching to a Poission model was not necessary.
+These six six provinces were fit with a logistic model of expected cumulative incidence, and a negative binomial model for observed interval incidence. The negative binomial model fit well because the dispersion parameter $(k)$ was small for both waves (10.217 for Ontario wave 1, for instance). Thus, switching to a Poission model was not necessary.
 
-One would expect though for any reasonable model would have fit well to these data though. This is primarly because large numbers of cases were reported on regular intervals, with no faulty weekend case reports for Ontario and Quebec.
+One would expect though that any reasonable model would have fit well to these data. This is primarly because large numbers of cases were reported on regular intervals, with no faulty weekend case reports for Ontario and Quebec.
 
-In Alberta and British Columbia, though weekend reporting was faulty, the corrected sums fit the trend of the reports around them, resulting in a good model fit. In addition, Saskatchewan actually saw multiple mini epidemic waves before a big wave starting late October, not just two waves. We fit to the two largest waves, but this may not have been the best choice. 
+In Alberta and British Columbia, though weekend reporting was faulty, the corrected sums fit the trend of the reports around them, enabling a good and useful model fit. In addition, rather than see two discrete epidemic waves waves, Saskatchewan actually saw multiple mini epidemic waves before a large wave starting late October. We fit to the two largest waves, but this may not have been the best choice. 
 
 Selecting the best fitting window for British Columbia was challenging because there were three distinct waves of epidemic there. One epidemic ranged from March to April, one from June to September, and one from October to November. We chose the first and final wave to fit models to.
 
-After the first wave, interval incidence in British Columbia grows exponentially for a significant chunk of the time series before slowing down, and then increasing again. For consistency's sake with the other provinces who saw a second wave in the fall of 2020, we fit to the second part of BC's second wave. Thus, the initial epidemic growth rate isn't strongly representative of the initial phase of the second wave, because cases counts grew at a different rate for much of that wave. However, after selecting the appropraiate fitting window, the negative binomial model fit well because the dispersion parameter k was small for both waves (W1 = 3.9931, W2 = 1.822).
+After the first wave, interval incidence in British Columbia grows exponentially for a significant chunk of the time series before slowing down, and then increasing again. For consistency's sake with the other provinces who saw a second wave in the fall of 2020, we fit to the second part of BC's second wave. Thus, the initial epidemic growth rate for BC isn't strongly representative of the initial phase of the second wave, because cases counts grew at a different rate for much of that wave. However, after selecting the appropraiate fitting window, the negative binomial model fit well as the dispersion parameter k was small for both waves (W1 = 3.9931, W2 = 1.822).
 
 ```{r, echo = FALSE, fig.height = 8, fig.width = 8, warning=FALSE, results = "asis"}
 province_plot <- function(egf_df, province, annotate){
@@ -230,6 +225,8 @@ province_plot <- function(egf_df, province, annotate){
 province_plot(egfs, "ON", annotate = TRUE)
 ```
 
+\break
+
 #### Quebec
 ```{r, echo = FALSE, fig.height = 8, fig.width = 8, warning=FALSE, results = "asis"}
 province_plot(egfs, "QC", annotate = TRUE)
@@ -240,17 +237,19 @@ province_plot(egfs, "QC", annotate = TRUE)
 province_plot(egfs, "AB", annotate = TRUE)
 ```
 
+\break
+
 ##### Saskatechewan
 ```{r, echo = FALSE, fig.height = 8, fig.width = 8, warning=FALSE, results = "asis"}
 province_plot(egfs, "SK", annotate = TRUE)
 ```
-
 
 ##### British Columbia
 ```{r, echo = FALSE, fig.height = 8, fig.width = 8, warning=FALSE, results = "asis"}
 province_plot(egfs, "BC", annotate = TRUE)
 ```
 
+\break
 
 ##### Manitoba
 ```{r, echo = FALSE, fig.height = 8, fig.width = 8, warning=FALSE, results = "asis"}
@@ -259,11 +258,13 @@ province_plot(egfs, "MB", annotate = TRUE)
 
 #### Poisson Models: Newfoundland and Labrador, Nova Scotia, New Brunsiwck, and Prince Edward Island
 
-There was only one real epidemic wave in Newfoundland and Labrador. However, the dispersion parameter k for the fitted model was 0.674, much below the threshold value as defined in the vignette, which explains why the negative binomial model fit well. We fit the second wave to a mostly flat second epidemic wave consiting of less than 5 cases at peak, which explains the poor fit of the model, as demonstrated in the corresponding plot below. It is unclear if growth rate has any practical interpretation, given the poor model fit that produced it. 
+There was only one real epidemic wave in Newfoundland and Labrador. However, the dispersion parameter k for the fitted model was 0.674, much below the threshold value, so the negative binomial model fit well. We fit the second wave to a mostly flat second epidemic wave consiting of less than 5 cases at peak. This low case count helps explain the poor fit of the model, which can be seen upon visible inspection of the graph for NL. It is unclear if growth rate for the second wave in Newfoundland and Labrador has any practical interpretation, given the poor model fit (and faulty confidence interval) that produced it. 
 
-For the rest of the provinces and waves, the dispersion parameter for a fitted negative binomial model exceeded the threshold value at which the negative binomial distribution was no longer effective. Therefore, Poision models fit better to the data.
+For the rest of the provinces and waves, the dispersion parameter for a fitted negative binomial model exceeded the threshold value at which that model was no longer effective. Therefore, a poision models fit better to the data.
 
-New Brunswick has a very small wave in between the two epidemic waves we fit. We didn't fit to it because to the other two were much larger in magnitude. Also, the second wave in Nova Scotia is tiny, which could impact our model fit.  Prince Edward actually had four epidemic waves, the final three being very similar in size. Our estimates of epidemic growth rates are valid and useful insofar as we consider the waves we picked to the ones of interest.
+New Brunswick saw a very small third epidemic wave in between the two epidemic waves we fit, however due to its relative size, we did not fit to it. In addition, the second wave in Nova Scotia consisted of very few cases, which might could explain our suboptimal fit to it. Prince Edward Island actually had four epidemic waves, the final three being very similar in size. So, estimates of epidemic growth rates are useful there insofar as we consider the waves we picked to the ones of interest.
+
+\break
 
 #### Newfoundland and Labrador
 ```{r, echo = FALSE, fig.height = 8, fig.width = 8, warning=FALSE, results = "asis"}
@@ -274,6 +275,8 @@ province_plot(egfs, "NL", annotate = TRUE)
 ```{r, echo = FALSE, fig.height = 8, fig.width = 8, warning=FALSE, results = "asis"}
 province_plot(egfs, "NB", annotate = TRUE)
 ```
+
+\break
 
 #### Nova Scotia
 ```{r, echo = FALSE, fig.height = 8, fig.width = 8, warning=FALSE, results = "asis"}

@@ -1,0 +1,85 @@
+\documentclass{article}
+\usepackage{color}
+\usepackage[T1]{fontenc}
+\input{4mbapreamble.tex}
+\begin{document}
+
+\title{Mathematics 747 Assignment 2}
+\author{Zachary Levine}
+\date{\today}
+\maketitle
+
+The following assignment was completed using the \texttt{McMasterPandemic} $\Rlogo$ package.
+
+\section{McMasterPandemic shiny improvements}
+I implemented the following bug fixes for the Shiny:
+\begin{itemize}
+\item Fixed a bug (at Luka and Vlad's sugegstion) where setting the population size (and several other parameters) explicitly by typing into the box would force the slider and the text input box out of sync.
+\item Fixed a bug (at Aigerim's suggestion) where time varying transmission rates could not be implimented after noise had been added to the graph.
+\end{itemize}
+
+Parts two and three were already complete.
+
+\section{Part four: Simulating an epidemic}
+ I spent many hours trying to find parameter settings to make the first wave of COVID-19 in Ontario. I first spent a very long time trying to do so without implementing time-varying transmission rates, and could not come up with a simulation that was even remotely close to the first wave of reported cases in Ontario. Eventually, I had to implement two time-varying changes for \texttt{beta0}, the baseline transmission rate across categories. I tried to find a match between the \texttt{report} column of the simulation and daily reported case counts of COVID-19 in Ontario. Below, please find my result. The only way I could attempt to include process error and observation error is with the parameter for the observation error as \texttt{True}, and the process error as \texttt{False}.
+ 
+<< init, fig.height=5, fig.width=5, echo=FALSE, message= FALSE, warning=FALSE>>=
+##Create a simulation that looks like the first wave of COVID-19 in Ontario.
+require("knitr")
+library("McMasterPandemic")
+library("ggplot2")
+params <- read_params("params.csv")
+params <- update(params,c(proc_disp = 0.5, obs_disp = 500))
+time_pars <- data.frame(Date=c("2020-03-10","2020-05-01"),
+                       Symbol=c("beta0", "beta0"),
+                       Relative_value=c(0.7671, 0.7261),
+                       stringsAsFactors=FALSE)
+sim <- run_sim(params, start_date = "2020-01-01" ,end_date = "2020-09-01",
+               params_timevar = time_pars, stoch = c(obs = TRUE, proc = FALSE))
+dropstates <- c("cumRep", "S", "E", "I", "X","D", "H", "foi", "R", "hosp", "ICU", "incidence", "death")
+plot(sim, drop_states = dropstates) + ggplot2::labs(x = "Date", y = "Daily Reported of COVID-19 Cases", title = "Simulation of first wave COVID-19 Pandemic in Ontario") +  theme(legend.position = "none")
+@
+
+
+\section{Part five: parameter fitting}
+Now, assuming that my simulation of the first wave in Ontario is correct, we will use the fitting machinery in \texttt{McMasterPandemic}, namely the method \texttt{calibrate} to estimate the model parameter for \texttt{beta0} that we started with. Then, we will plot the result.
+
+<< main, fig.height=5, fig.width=5, echo=FALSE, message= FALSE, warning=FALSE>>=
+##Calibrate beta0 to the simulation data.
+library("anytime")
+thedata <- data.frame(sim[,c("date")],rep("report", nrow(sim)), sim[,"report"])
+colnames(thedata) <- c("date", "var", "value")
+###Set three time varying paramters for beta0
+optpars <- list(params = list(beta0 = 0.5), rel_beta0 = c(0.7671, 0.7261))
+res <- calibrate(start_date = anytime::anydate("2020-01-01"),
+          data = thedata,
+          base_params = params,
+          time_args = list(break_dates = NULL),
+          opt_pars = optpars,
+          end_date =  anytime::anydate("2020-09-01")
+          )
+plot(res, data= thedata)
+@
+
+Visual inspection of the plot confirms that we have a decent model fit. If we compare the estimated parameters with the known ones that we used to generate the simulation, we see a somewhat reasonable match as well.
+
+<< compare1, fig.height=5, fig.width=5, echo=FALSE, message= FALSE, warning=FALSE>>=
+##Display a table comparing our estimated values of beta0 to the ones we used to generate the simulation.
+library("tibble")
+coefs <- coef(res, "fitted")
+beta0_originals <- c(params["beta0"], coefs$params$beta0)
+beta0_timechangeone <- c(0.7671, coefs$rel_beta0[1])
+beta0_timechangetwo <- c(0.7261, coefs$rel_beta0[2])
+toShow <- tibble("beta0 initial values" = beta0_originals,
+                            "beta0 first time change" = beta0_timechangeone,
+                            "beta0 second time change" =  beta0_timechangetwo)
+knitr::kable(toShow)
+coef(res, "fitted")
+@
+
+We hypothesize that including both process error and observation error does worsened our parameter estimates significantly. However, we conclude our section with some feedback on the \texttt{McMasterPandemic} package.
+
+\section{Part six: Feedback on \texttt{McMasterPandemic}}
+Overall, I really enjoyed working with the \texttt{McMasterPandemic} package.
+
+\end{document}
